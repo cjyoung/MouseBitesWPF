@@ -1,5 +1,7 @@
-﻿using System;
+﻿using LaVie.Libraries;
+using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
@@ -7,6 +9,7 @@ using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Web.Script.Serialization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
@@ -19,16 +22,6 @@ using System.Windows.Shapes;
 
 namespace LaVie
 {
-    class SearchParameters
-    {
-        internal string rootUrl = "http://disneyworld.disney.go.com";
-        internal string siteUrl = "/reservations/dining/";
-        internal string restaurantName = "Be%20Our%20Guest%20Restaurant";
-        internal string restaurantId = "be-our-guest";
-        internal string times = "Dinner";
-        internal string partySize = "2";
-    }
-
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
@@ -41,7 +34,13 @@ namespace LaVie
             InitializeComponent();
             worker.DoWork += new DoWorkEventHandler(LaunchSearch);
             worker.RunWorkerCompleted += worker_RunWorkerCompleted;
-            worker.WorkerSupportsCancellation = true; 
+            worker.WorkerSupportsCancellation = true;
+
+            BackgroundWorker bw = new BackgroundWorker();
+            bw.DoWork += new DoWorkEventHandler(LoadDropDownOptions);
+            bw.RunWorkerCompleted += worker_RunWorkerCompleted;
+            bw.WorkerSupportsCancellation = true;
+            bw.RunWorkerAsync();
         }
 
         private void Search_Click(object sender, RoutedEventArgs e)
@@ -70,110 +69,107 @@ namespace LaVie
             MainVM.AppendStatusLog("Initializing...");
             LaVie.MusicBox.StartUpSong();
 
-            MainVM.AvailableLog = "";
-            MainVM.NotAvailableLog = "";
-
             string[] targetDates = { 
                             #region December
                                 //December
-                                //"12/01/2012",
-                                // "12/02/2012",
-                                // "12/03/2012",
-                                // "12/04/2012",
-                                // "12/05/2012",
-                                // "12/06/2012",
-                                // "12/07/2012",
-                                // "12/08/2012",
-                                // "12/09/2012",
-                                // "12/10/2012",
-                                // "12/11/2012",
-                                // "12/12/2012",
-                                // "12/13/2012",
-                                // "12/14/2012",
-                                // "12/15/2012",
-                                // "12/16/2012",
-                                // "12/17/2012",
-                                // "12/18/2012",
-                                // "12/19/2012",
-                                // "12/20/2012",
-                                // "12/21/2012",
-                                // "12/22/2012",
-                                // "12/23/2012",
-                                // "12/24/2012",
-                                // "12/25/2012",
-                                // "12/26/2012",
-                                // "12/27/2012",
-                                // "12/28/2012",
-                                // "12/29/2012",
-                                // "12/30/2012",
-                                // "12/31/2012"
+                                "12/01/2012",
+                                 "12/02/2012",
+                                 "12/03/2012",
+                                 "12/04/2012",
+                                 "12/05/2012",
+                                 "12/06/2012",
+                                 "12/07/2012",
+                                 "12/08/2012",
+                                 "12/09/2012",
+                                 "12/10/2012",
+                                 "12/11/2012",
+                                 "12/12/2012",
+                                 "12/13/2012",
+                                 "12/14/2012",
+                                 "12/15/2012",
+                                 "12/16/2012",
+                                 "12/17/2012",
+                                 "12/18/2012",
+                                 "12/19/2012",
+                                 "12/20/2012",
+                                 "12/21/2012",
+                                 "12/22/2012",
+                                 "12/23/2012",
+                                 "12/24/2012",
+                                 "12/25/2012",
+                                 "12/26/2012",
+                                 "12/27/2012",
+                                 "12/28/2012",
+                                 "12/29/2012",
+                                 "12/30/2012",
+                                 "12/31/2012",
                             #endregion
                             #region January
                                 //January
-                                //"01/01/2013",
-                                // "01/02/2013",
-                                // "01/03/2013",
-                                // "01/04/2013",
-                                // "01/05/2013",
-                                // "01/06/2013",
-                                // "01/07/2013",
-                                // "01/08/2013",
-                                // "01/09/2013",
-                                // "01/10/2013",
-                                // "01/11/2013",
-                                // "01/12/2013",
-                                // "01/13/2013",
-                                // "01/14/2013",
-                                // "01/15/2013",
-                                // "01/16/2013",
-                                // "01/17/2013",
-                                // "01/18/2013",
-                                // "01/19/2013",
-                                // "01/20/2013",
-                                // "01/21/2013",
-                                // "01/22/2013",
-                                // "01/23/2013",
-                                // "01/24/2013",
-                                // "01/25/2013",
-                                // "01/26/2013",
-                                // "01/27/2013",
-                                // "01/28/2013",
-                                // "01/29/2013",
-                                // "01/30/2013",
-                                // "01/31/2013"
+                                "01/01/2013",
+                                 "01/02/2013",
+                                 "01/03/2013",
+                                 "01/04/2013",
+                                 "01/05/2013",
+                                 "01/06/2013",
+                                 "01/07/2013",
+                                 "01/08/2013",
+                                 "01/09/2013",
+                                 "01/10/2013",
+                                 "01/11/2013",
+                                 "01/12/2013",
+                                 "01/13/2013",
+                                 "01/14/2013",
+                                 "01/15/2013",
+                                 "01/16/2013",
+                                 "01/17/2013",
+                                 "01/18/2013",
+                                 "01/19/2013",
+                                 "01/20/2013",
+                                 "01/21/2013",
+                                 "01/22/2013",
+                                 "01/23/2013",
+                                 "01/24/2013",
+                                 "01/25/2013",
+                                 "01/26/2013",
+                                 "01/27/2013",
+                                 "01/28/2013",
+                                 "01/29/2013",
+                                 "01/30/2013",
+                                 "01/31/2013",
                             #endregion
                             #region February 
                                 //February
-                                //"02/01/2013",
-                                //"02/02/2013",
-                                //"02/03/2013",
-                                //"02/04/2013",
-                                //"02/05/2013",
-                                //"02/06/2013",
-                                //"02/07/2013",
-                                //"02/08/2013",
-                                //"02/09/2013",
-                                //"02/10/2013",
-                                //"02/11/2013",
-                                //"02/12/2013",
-                                //"02/13/2013",
-                                //"02/14/2013",
-                                //"02/15/2013",
-                                //"02/16/2013",
-                                //"02/17/2013",
-                                //"02/18/2013",
-                                //"02/19/2013",
-                                //"02/20/2013",
-                                //"02/21/2013",
-                                //"02/22/2013",
-                                //"02/23/2013",
-                                //"02/24/2013",
-                                //"02/25/2013",
-                                //"02/26/2013",
-                                //"02/27/2013",
-                                //"02/28/2013"
+                                "02/01/2013",
+                                "02/02/2013",
+                                "02/03/2013",
+                                "02/04/2013",
+                                "02/05/2013",
+                                "02/06/2013",
+                                "02/07/2013",
+                                "02/08/2013",
+                                "02/09/2013",
+                                "02/10/2013",
+                                "02/11/2013",
+                                "02/12/2013",
+                                "02/13/2013",
+                                "02/14/2013",
+                                "02/15/2013",
+                                "02/16/2013",
+                                "02/17/2013",
+                                "02/18/2013",
+                                "02/19/2013",
+                                "02/20/2013",
+                                "02/21/2013",
+                                "02/22/2013",
+                                "02/23/2013",
+                                "02/24/2013",
+                                "02/25/2013",
+                                "02/26/2013",
+                                "02/27/2013",
+                                "02/28/2013"
                             #endregion
-                                "04/01/2013"
+                                //"04/01/2013"
                             };
             string convoId = "";
             SearchParameters sp = new SearchParameters();
@@ -197,33 +193,6 @@ namespace LaVie
             MainVM.AppendStatusLog("finished searching");
         }
 
-        private static string getTagContents(string results, string id, string tag, string property)
-        {
-            try
-            {
-                MatchCollection matches = Regex.Matches(results, "(<" + tag + "[^>]*" + property + "=\"" + id + "\"[^>]*>)(.*)", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-                string endOfPage = matches[0].Groups[2].Value;
-                int endOfDiv = getTag(endOfPage, 0, 0, tag);
-
-                return endOfPage.Substring(0, endOfDiv) + "\n";
-            }
-            catch (Exception)
-            {
-                return "";
-            }
-        }
-
-        private static int getTag(string code, int startFrom, int level, string tag)
-        {
-            int openDiv = code.IndexOf("<" + tag);
-            int closeDiv = code.IndexOf("</" + tag);
-            if (openDiv < closeDiv)
-            { return getTag(code.Substring(openDiv + 1), startFrom + openDiv + 1, ++level, tag); }
-            else if (level > 0)
-            { return getTag(code.Substring(closeDiv + 1), startFrom + closeDiv + 1, --level, tag); }
-            else
-            { return closeDiv + startFrom; }
-        }
         private void ConductSearch(Dictionary<string, int> notes, SearchParameters searchParameters, string targetDate, ref CookieContainer cookieJar, out string convoId)
         {
             targetDate = targetDate.Replace("/", "%2F");
@@ -240,11 +209,11 @@ namespace LaVie
                                                 "&_onlyShowDiningPlans=on" +
                                                 "&WDW_SchEvts_Global_QQContDine_Link=Search%20for%20a%20Table" +
                                                 "&mode=async",
-                                                    searchParameters.restaurantName,
-                                                    searchParameters.restaurantId,
+                                                    MainVM.CurrentRestaurant.name,
+                                                    MainVM.CurrentRestaurant.id,
                                                     targetDate,
-                                                    searchParameters.times,
-                                                    searchParameters.partySize);
+                                                    MainVM.CurrentTime.id,
+                                                    MainVM.CurrentPartySize.id);
             string result;
             MainVM.StatusLog += "second request, to get conversation id: ";
             CookieContainer cookies = cookieJar;
@@ -266,11 +235,11 @@ namespace LaVie
 
             MainVM.AppendStatusLog(new string('-', 25));
             string r = "";
-            r = getTagContents(result, "SearchFailMessage", "div", "id").Trim();
+            r = HtmlHelper.getTagContents(result, "SearchFailMessage", "div", "id").Trim();
             if (r.Length > 0) MainVM.AppendStatusLog(r);
-            r = getTagContents(result, "reserveFormLabel", "label", "class").Trim();
+            r = HtmlHelper.getTagContents(result, "reserveFormLabel", "label", "class").Trim();
             if (r.Length > 0) MainVM.AppendStatusLog(string.Format("Available Times: {0}", r));
-            r = getTagContents(result, "alternativeTimesSectionMessage", "p", "id").Trim();
+            r = HtmlHelper.getTagContents(result, "alternativeTimesOptions", "p", "id").Trim();
             if (r.Length > 0) MainVM.AppendStatusLog(r);
             MainVM.AppendStatusLog(new string('-', 25));
 
@@ -342,6 +311,32 @@ namespace LaVie
         {
             worker.CancelAsync();
             Application.Current.Shutdown();
+        }
+
+        private void LoadDropDownOptions(object sender, DoWorkEventArgs e)
+        {
+            SearchParameters sp = new SearchParameters();
+
+            MainVM.AppendOutputLog("creating cookie jar");
+            CookieContainer cookieJar = new CookieContainer();
+
+            MainVM.AppendOutputLog("get cookies and initial info");
+            string result = "";
+            cookieJar = getCookiesFromRequest(cookieJar, sp, sp.rootUrl + sp.siteUrl, "", out result, "GET");
+
+            string dineObject = HtmlHelper.findJSONObject(result, "WDPRO.dine");
+            string viewObject = Regex.Replace(HtmlHelper.findJSONObject(dineObject, "\"view\""),"\"view\"[^:]*:","");
+
+            MainVM.AppendOutputLog(viewObject);
+
+            JavaScriptSerializer ser = new JavaScriptSerializer();
+            MainVM.DineView = ser.Deserialize<DineSetting>(viewObject);
+
+            string timesList = HtmlHelper.getTagContents(result, "makeResTime", "select", "id");
+            MainVM.TimesList = HtmlHelper.ConvertOptionToObject(timesList);
+
+            string partySizes = HtmlHelper.getTagContents(result, "makeResParty", "select", "id");
+            MainVM.PartySizes = HtmlHelper.ConvertOptionToObject(partySizes);
         }
     }
 }
