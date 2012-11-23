@@ -32,4 +32,10 @@ namespace LaVie.Libraries
         public string name { get; set; }
         public string id { get; set; }
     }
+
+    public class SearchDate
+    {
+        public bool toSearch { get; set; }
+        public DateTime date { get; set; }
+    }
 }

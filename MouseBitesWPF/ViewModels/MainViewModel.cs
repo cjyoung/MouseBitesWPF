@@ -11,6 +11,8 @@ namespace LaVie.ViewModels
 {
     public class MainViewModel : INotifyPropertyChanged
     {
+        private bool _defaultToSearchValue = false;
+
         private ObservableCollection<DineOption> _PartySizes;
         public ObservableCollection<DineOption> PartySizes
         {
@@ -40,7 +42,32 @@ namespace LaVie.ViewModels
             set
             {
                 _DineView = value;
+                UpdateListOfDatesAvailableToSearch();
                 OnPropertyChanged("DineView");
+            }
+        }
+
+        private void UpdateListOfDatesAvailableToSearch()
+        {
+            DateTime mindate = DateTime.ParseExact(_DineView.search.minDate, "MMMM, dd, yyyy", System.Globalization.CultureInfo.InvariantCulture);
+            //maxDate from DineView.search.maxDate is more than 180 days out, which gives errors when searching for times on them
+            DateTime maxdate = DateTime.ParseExact(_DineView.search.maxGuestBookDate, "MMMM, dd, yyyy", System.Globalization.CultureInfo.InvariantCulture);
+            DatesList = new ObservableCollection<SearchDate>(
+                (from d in Enumerable.Range(0, (int)Math.Round(maxdate.Subtract(mindate).TotalDays + 1))
+                .Select(offset => mindate.AddDays(offset))
+                 select
+                     new SearchDate { date = d.Date, toSearch = _defaultToSearchValue })
+                .ToList());
+        }
+
+        private ObservableCollection<SearchDate> _DatesList;
+        public ObservableCollection<SearchDate> DatesList
+        {
+            get { return _DatesList; }
+            set
+            {
+                _DatesList = value;
+                OnPropertyChanged("DatesList");
             }
         }
 

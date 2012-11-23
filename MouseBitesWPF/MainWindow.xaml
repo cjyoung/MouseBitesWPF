@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:viewModel="clr-namespace:LaVie.ViewModels"
         xmlns:diag="clr-namespace:System.Diagnostics;assembly=WindowsBase"
-        Title="MainWindow" Height="550" Width="525" Icon="mousebites.ico">
+        Title="MainWindow" Height="550" Width="650" Icon="mousebites.ico">
     <Window.DataContext>
         <viewModel:MainViewModel x:Name="MainVM" />
     </Window.DataContext>
@@ -15,11 +15,33 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="15*" />
             <ColumnDefinition Width="20*" />
             <ColumnDefinition Width="10*" />
             <ColumnDefinition Width="10*" />
         </Grid.ColumnDefinitions>
-        <Grid Grid.Row="0" Grid.Column="0">
+        <Grid Grid.Column="0" Grid.Row="0" Grid.RowSpan="4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <Label Grid.Row="0">Dates to Search</Label>
+            <ListBox Grid.Row="1" Name="listBoxZone" ItemsSource="{Binding DatesList}" VerticalAlignment="Stretch" Background="Azure">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <CheckBox Name="cbDatesToSearch" Content="{Binding date, Mode=OneWay}"
+                                  ContentStringFormat="MMM dd, yyyy (dddd)" 
+                                  IsChecked="{Binding toSearch, Mode=TwoWay}"
+                        />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+        </Grid>
+        
+        <Grid Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="2">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -48,20 +70,20 @@
                 DisplayMemberPath="name"                      
             />
         </Grid>
-        <StackPanel Grid.Row="1" Grid.ColumnSpan="2" Orientation="Horizontal" >
+        <StackPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" >
             <Button x:Name="Search" Content="Search" Width="75" Click="Search_Click" Margin="5"/>
             <Button x:Name="StopSearch" Content="Stop Search" Width="75" Click="StopSearch_Click" Margin="5"/>
         </StackPanel>
-        <StackPanel Grid.Row="1" Grid.Column="2" Orientation="Horizontal" FlowDirection="RightToLeft">
+        <StackPanel Grid.Row="1" Grid.Column="3" Orientation="Horizontal" FlowDirection="RightToLeft">
             <Button x:Name="Exit" Content="Exit" Width="75" Click="Exit_Click" Margin="5"/>
         </StackPanel>
-        <Label Grid.Column="0" Grid.Row="2">Status</Label>
-        <TextBox x:Name="Status" Grid.Column="0" Grid.Row="3" IsReadOnly="True" Text="{Binding StatusLog, Mode=OneWay}" ScrollViewer.CanContentScroll="True" VerticalScrollBarVisibility="Auto" TextChanged="Status_TextChanged" TextWrapping="WrapWithOverflow" />
-        
-        <Label Grid.Column="1" Grid.Row="2">Not Available</Label>
-        <TextBox x:Name="NotAvailable" Grid.Column="1" Grid.Row="3" IsReadOnly="True" Text="{Binding NotAvailableLog, Mode=OneWay}" ScrollViewer.CanContentScroll="True" VerticalScrollBarVisibility="Auto" />
-        
-        <Label Grid.Column="2" Grid.Row="2">Available</Label>
-        <TextBox x:Name="Available" Grid.Column="2" Grid.Row="3" IsReadOnly="True" Text="{Binding AvailableLog, Mode=OneWay}" ScrollViewer.CanContentScroll="True" VerticalScrollBarVisibility="Auto" />
+        <Label Grid.Column="1" Grid.Row="2">Status</Label>
+        <TextBox x:Name="Status" Grid.Column="1" Grid.Row="3" IsReadOnly="True" Text="{Binding StatusLog, Mode=OneWay}" ScrollViewer.CanContentScroll="True" VerticalScrollBarVisibility="Auto" TextChanged="Status_TextChanged" TextWrapping="WrapWithOverflow" />
+
+        <Label Grid.Column="2" Grid.Row="2">Not Available</Label>
+        <TextBox x:Name="NotAvailable" Grid.Column="2" Grid.Row="3" IsReadOnly="True" Text="{Binding NotAvailableLog, Mode=OneWay}" ScrollViewer.CanContentScroll="True" VerticalScrollBarVisibility="Auto" />
+
+        <Label Grid.Column="3" Grid.Row="2">Available</Label>
+        <TextBox x:Name="Available" Grid.Column="3" Grid.Row="3" IsReadOnly="True" Text="{Binding AvailableLog, Mode=OneWay}" ScrollViewer.CanContentScroll="True" VerticalScrollBarVisibility="Auto" />
     </Grid>
 </Window>

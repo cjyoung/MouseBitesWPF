@@ -40,12 +40,21 @@ namespace LaVie
             bw.DoWork += new DoWorkEventHandler(LoadDropDownOptions);
             bw.RunWorkerCompleted += worker_RunWorkerCompleted;
             bw.WorkerSupportsCancellation = true;
+
+            MainVM.AppendStatusLog("please wait, retrieving dates...");
             bw.RunWorkerAsync();
         }
 
         private void Search_Click(object sender, RoutedEventArgs e)
         {
-            worker.RunWorkerAsync();
+
+            if (MainVM.DatesList.Where(b => b.toSearch == true).Count() == 0
+                    || Restaurants.SelectedItem == null
+                    || PartySizes.SelectedItem == null
+                    || Times.SelectedItem == null)
+                MessageBox.Show("Please make sure you've selected a date, restaurant, party size, and dining time before searching");
+            else
+                worker.RunWorkerAsync();
         }
 
         private void StopSearch_Click(object sender, RoutedEventArgs e)
@@ -62,6 +71,9 @@ namespace LaVie
 
         private void LaunchSearch(object sender, DoWorkEventArgs e)
         {
+            MainVM.AvailableLog = "";
+            MainVM.NotAvailableLog = "";
+
             DateTime startTime = DateTime.Now;
             Dictionary<string, int> notes = new Dictionary<string, int>();
 
@@ -69,108 +81,6 @@ namespace LaVie
             MainVM.AppendStatusLog("Initializing...");
             LaVie.MusicBox.StartUpSong();
 
-            string[] targetDates = { 
-                            #region December
-                                //December
-                                "12/01/2012",
-                                 "12/02/2012",
-                                 "12/03/2012",
-                                 "12/04/2012",
-                                 "12/05/2012",
-                                 "12/06/2012",
-                                 "12/07/2012",
-                                 "12/08/2012",
-                                 "12/09/2012",
-                                 "12/10/2012",
-                                 "12/11/2012",
-                                 "12/12/2012",
-                                 "12/13/2012",
-                                 "12/14/2012",
-                                 "12/15/2012",
-                                 "12/16/2012",
-                                 "12/17/2012",
-                                 "12/18/2012",
-                                 "12/19/2012",
-                                 "12/20/2012",
-                                 "12/21/2012",
-                                 "12/22/2012",
-                                 "12/23/2012",
-                                 "12/24/2012",
-                                 "12/25/2012",
-                                 "12/26/2012",
-                                 "12/27/2012",
-                                 "12/28/2012",
-                                 "12/29/2012",
-                                 "12/30/2012",
-                                 "12/31/2012",
-                            #endregion
-                            #region January
-                                //January
-                                "01/01/2013",
-                                 "01/02/2013",
-                                 "01/03/2013",
-                                 "01/04/2013",
-                                 "01/05/2013",
-                                 "01/06/2013",
-                                 "01/07/2013",
-                                 "01/08/2013",
-                                 "01/09/2013",
-                                 "01/10/2013",
-                                 "01/11/2013",
-                                 "01/12/2013",
-                                 "01/13/2013",
-                                 "01/14/2013",
-                                 "01/15/2013",
-                                 "01/16/2013",
-                                 "01/17/2013",
-                                 "01/18/2013",
-                                 "01/19/2013",
-                                 "01/20/2013",
-                                 "01/21/2013",
-                                 "01/22/2013",
-                                 "01/23/2013",
-                                 "01/24/2013",
-                                 "01/25/2013",
-                                 "01/26/2013",
-                                 "01/27/2013",
-                                 "01/28/2013",
-                                 "01/29/2013",
-                                 "01/30/2013",
-                                 "01/31/2013",
-                            #endregion
-                            #region February 
-                                //February
-                                "02/01/2013",
-                                "02/02/2013",
-                                "02/03/2013",
-                                "02/04/2013",
-                                "02/05/2013",
-                                "02/06/2013",
-                                "02/07/2013",
-                                "02/08/2013",
-                                "02/09/2013",
-                                "02/10/2013",
-                                "02/11/2013",
-                                "02/12/2013",
-                                "02/13/2013",
-                                "02/14/2013",
-                                "02/15/2013",
-                                "02/16/2013",
-                                "02/17/2013",
-                                "02/18/2013",
-                                "02/19/2013",
-                                "02/20/2013",
-                                "02/21/2013",
-                                "02/22/2013",
-                                "02/23/2013",
-                                "02/24/2013",
-                                "02/25/2013",
-                                "02/26/2013",
-                                "02/27/2013",
-                                "02/28/2013"
-                            #endregion
-                                //"04/01/2013"
-                            };
             string convoId = "";
             SearchParameters sp = new SearchParameters();
 
@@ -183,7 +93,12 @@ namespace LaVie
 
 
             MainVM.AppendStatusLog("conducting search");
-            foreach (string searchDate in targetDates)
+            foreach (string searchDate in
+                (
+                    from d in MainVM.DatesList
+                    where d.toSearch == true
+                    select d.date.ToString("MM'/'dd'/'yyyy")
+                ))
             {
                 MainVM.AppendStatusLog(string.Format("searching on {0}...", searchDate));
                 ConductSearch(notes, sp, searchDate, ref cookieJar, out convoId);
@@ -195,7 +110,6 @@ namespace LaVie
 
         private void ConductSearch(Dictionary<string, int> notes, SearchParameters searchParameters, string targetDate, ref CookieContainer cookieJar, out string convoId)
         {
-            targetDate = targetDate.Replace("/", "%2F");
             string postString = string.Format("webBindCommandName=tableServiceSearchForm" +
                                                 "&mode=async&_eventId=SubmitDiningSearch" +
                                                 "&locations=" +
@@ -209,11 +123,11 @@ namespace LaVie
                                                 "&_onlyShowDiningPlans=on" +
                                                 "&WDW_SchEvts_Global_QQContDine_Link=Search%20for%20a%20Table" +
                                                 "&mode=async",
-                                                    MainVM.CurrentRestaurant.name,
-                                                    MainVM.CurrentRestaurant.id,
-                                                    targetDate,
-                                                    MainVM.CurrentTime.id,
-                                                    MainVM.CurrentPartySize.id);
+                                                    System.Web.HttpUtility.UrlEncode(MainVM.CurrentRestaurant.name),
+                                                    System.Web.HttpUtility.UrlEncode(MainVM.CurrentRestaurant.id),
+                                                    System.Web.HttpUtility.UrlEncode(targetDate),
+                                                    System.Web.HttpUtility.UrlEncode(MainVM.CurrentTime.id),
+                                                    System.Web.HttpUtility.UrlEncode(MainVM.CurrentPartySize.id));
             string result;
             MainVM.StatusLog += "second request, to get conversation id: ";
             CookieContainer cookies = cookieJar;
@@ -229,31 +143,66 @@ namespace LaVie
                 MainVM.AppendStatusLog("searching...");
                 cookieJar = getCookiesFromRequest(cookieJar, searchParameters, searchParameters.rootUrl + nextURL, postString, out result, "GET", convoId);
                 redirectURL = Regex.Match(result, "RedirectURL\":\"([^\"]*)\"").Groups[1].Value.Replace("\\/", "/");
+                if (result == "error") redirectURL = "error";
             }
-            MainVM.AppendStatusLog("getting results page");
-            cookieJar = getCookiesFromRequest(cookieJar, searchParameters, searchParameters.rootUrl + redirectURL, postString, out result, "GET");
 
-            MainVM.AppendStatusLog(new string('-', 25));
-            string r = "";
-            r = HtmlHelper.getTagContents(result, "SearchFailMessage", "div", "id").Trim();
-            if (r.Length > 0) MainVM.AppendStatusLog(r);
-            r = HtmlHelper.getTagContents(result, "reserveFormLabel", "label", "class").Trim();
-            if (r.Length > 0) MainVM.AppendStatusLog(string.Format("Available Times: {0}", r));
-            r = HtmlHelper.getTagContents(result, "alternativeTimesOptions", "p", "id").Trim();
-            if (r.Length > 0) MainVM.AppendStatusLog(r);
-            MainVM.AppendStatusLog(new string('-', 25));
-
-            if (result.Contains("Sorry, we were unable to find available times."))
+            if (redirectURL != "error")
             {
-                MainVM.AppendStatusLog("no times found");
-                MainVM.AppendNotAvailableLog(string.Format("{0}", System.Web.HttpUtility.UrlDecode(targetDate)));
+                MainVM.AppendStatusLog("getting results page");
+                cookieJar = getCookiesFromRequest(cookieJar, searchParameters, searchParameters.rootUrl + redirectURL, postString, out result, "GET");
+
+                MainVM.AppendStatusLog(new string('-', 25));
+                string r = "";
+                r = HtmlHelper.getTagContents(result, "SearchFailMessage", "div", "id").Trim();
+                if (r.Length > 0) MainVM.AppendStatusLog(r);
+                r = HtmlHelper.getTagContents(result, "reserveFormLabel", "label", "class").Trim();
+                if (r.Length > 0) MainVM.AppendStatusLog(string.Format("Available Times: {0}", r));
+                List<string> b = ParseAltTimes(result);
+                if (b.Count() > 0) MainVM.AppendStatusLog(string.Format("Alt Times found: {0}", string.Join(", ", b)));
+                MainVM.AppendStatusLog(new string('-', 25));
+
+                if (result.Contains("Sorry, we were unable to find available times."))
+                {
+                    MainVM.AppendStatusLog("no times found");
+                    MainVM.AppendNotAvailableLog(string.Format("{0}", System.Web.HttpUtility.UrlDecode(targetDate)));
+                }
+                else
+                {
+                    LaVie.MusicBox.PlayNote(LaVie.MusicBox.Notes.A4, 500);
+                    MainVM.AppendStatusLog("***** possible success *****");
+                    MainVM.AppendAvailableLog(string.Format("{0}", System.Web.HttpUtility.UrlDecode(targetDate)));
+                    if (b.Count > 0 && r.Length > 0)
+                    {
+                        b.Add(r);
+                        foreach (string time in 
+                            (from a in b.Distinct()
+                             orderby DateTime.Parse(a) ascending
+                             select a))
+                        {
+                            MainVM.AppendAvailableLog(string.Format("- {0}", time));
+                        }
+                    }
+                }
             }
             else
             {
-                LaVie.MusicBox.PlayNote(LaVie.MusicBox.Notes.A4, 500);
-                MainVM.AppendStatusLog("***** possible success *****");
-                MainVM.AppendAvailableLog(string.Format("{0}", System.Web.HttpUtility.UrlDecode(targetDate)));
+                MainVM.AppendNotAvailableLog(string.Format("{0} (error)", System.Web.HttpUtility.UrlDecode(targetDate)));
             }
+        }
+
+        private List<string> ParseAltTimes(string result)
+        {
+            //reserveFormLabel
+            List<string> altTimes = new List<string>();
+
+            MatchCollection matches = Regex.Matches(result, "<label[^>]*class=['\"]reserveFormLabel['\"][^>]*>.*", RegexOptions.Singleline & RegexOptions.IgnoreCase);
+
+            foreach (Match match in matches)
+            {
+                altTimes.Add(HtmlHelper.getTagContents(match.Groups[0].Value, "reserveFormLabel", "label", "class").Trim());
+            }
+
+            return altTimes;
         }
 
         private CookieContainer getCookiesFromRequest(CookieContainer cookieJar, SearchParameters searchParameters, string url, string postString, out string result, string method = "POST", string conversationid = "")
@@ -325,7 +274,7 @@ namespace LaVie
             cookieJar = getCookiesFromRequest(cookieJar, sp, sp.rootUrl + sp.siteUrl, "", out result, "GET");
 
             string dineObject = HtmlHelper.findJSONObject(result, "WDPRO.dine");
-            string viewObject = Regex.Replace(HtmlHelper.findJSONObject(dineObject, "\"view\""),"\"view\"[^:]*:","");
+            string viewObject = Regex.Replace(HtmlHelper.findJSONObject(dineObject, "\"view\""), "\"view\"[^:]*:", "");
 
             MainVM.AppendOutputLog(viewObject);
 
