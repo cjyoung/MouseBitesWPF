@@ -65,21 +65,54 @@ namespace LaVie
         void worker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
             MainVM.AppendStatusLog("===== thread completed =====");
-            LaVie.MusicBox.PlayNote(MusicBox.Notes.F4, 200);
-            LaVie.MusicBox.PlayNote(MusicBox.Notes.C4, 200);
+            //LaVie.MusicBox.PlayNote(MusicBox.Notes.F4, 200);
+            //LaVie.MusicBox.PlayNote(MusicBox.Notes.C4, 200);
         }
 
         private void LaunchSearch(object sender, DoWorkEventArgs e)
         {
-            MainVM.AvailableLog = "";
-            MainVM.NotAvailableLog = "";
+            if (!MainVM.RepeatSearch)
+            {
+                MainVM.AvailableLog = "";
+                MainVM.NotAvailableLog = "";
+                LaunchSearchInstance(sender, e);
+            }
+            else
+            {
+                while (!worker.CancellationPending)
+                {
+                    MainVM.AvailabilityLogToSend = "";
+                    MainVM.AppendAvailableLog("--new search--");
+                    MainVM.AppendNotAvailableLog("--new search--");
+                    LaunchSearchInstance(sender, e);
 
+                    if (MainVM.SendEmail && MainVM.AvailabilityLogToSend.Length > 0)
+                    {
+                        EmailHelper.SendEmail(MainVM.EmailLogin, MainVM.EmailPassword, MainVM.AvailabilityLogToSend);
+                        MainVM.AppendStatusLog("email sent");
+                    }
+
+                    for (int i = 0; i < MainVM.RepeatSearchAmount && !worker.CancellationPending; i++)
+                    {
+                        MainVM.AppendStatusLog(string.Format("pausing before next search... {0} mins",
+                                                            MainVM.RepeatSearchAmount - i));
+                        for (int j = 0; j < 60 && !worker.CancellationPending; j++)
+                        {
+                            System.Threading.Thread.Sleep(1000);                            
+                        }
+                    }
+                }
+            }
+        }
+
+        private void LaunchSearchInstance(object sender, DoWorkEventArgs e)
+        {
             DateTime startTime = DateTime.Now;
             Dictionary<string, int> notes = new Dictionary<string, int>();
 
             MainVM.AppendStatusLog(new string('*', 25));
             MainVM.AppendStatusLog("Initializing...");
-            LaVie.MusicBox.StartUpSong();
+            //LaVie.MusicBox.StartUpSong();
 
             string convoId = "";
             SearchParameters sp = new SearchParameters();
@@ -168,9 +201,10 @@ namespace LaVie
                 }
                 else
                 {
-                    LaVie.MusicBox.PlayNote(LaVie.MusicBox.Notes.A4, 500);
+                    //LaVie.MusicBox.PlayNote(LaVie.MusicBox.Notes.A4, 500);
                     MainVM.AppendStatusLog("***** possible success *****");
                     MainVM.AppendAvailableLog(string.Format("{0}", System.Web.HttpUtility.UrlDecode(targetDate)));
+                    MainVM.AppendAvailabilityLogToSend(string.Format("{0}", System.Web.HttpUtility.UrlDecode(targetDate)));
                     if (b.Count > 0 && r.Length > 0)
                     {
                         b.Add(r);
@@ -180,6 +214,7 @@ namespace LaVie
                              select a))
                         {
                             MainVM.AppendAvailableLog(string.Format("- {0}", time));
+                            MainVM.AppendAvailabilityLogToSend(string.Format("- {0}", time));
                         }
                     }
                 }
@@ -266,17 +301,17 @@ namespace LaVie
         {
             SearchParameters sp = new SearchParameters();
 
-            MainVM.AppendOutputLog("creating cookie jar");
+            //MainVM.AppendStatusLog("creating cookie jar");
             CookieContainer cookieJar = new CookieContainer();
 
-            MainVM.AppendOutputLog("get cookies and initial info");
+            //MainVM.AppendStatusLog("get cookies and initial info");
             string result = "";
             cookieJar = getCookiesFromRequest(cookieJar, sp, sp.rootUrl + sp.siteUrl, "", out result, "GET");
 
             string dineObject = HtmlHelper.findJSONObject(result, "WDPRO.dine");
             string viewObject = Regex.Replace(HtmlHelper.findJSONObject(dineObject, "\"view\""), "\"view\"[^:]*:", "");
 
-            MainVM.AppendOutputLog(viewObject);
+            //MainVM.AppendStatusLog(viewObject);
 
             JavaScriptSerializer ser = new JavaScriptSerializer();
             MainVM.DineView = ser.Deserialize<DineSetting>(viewObject);

@@ -82,6 +82,28 @@ namespace LaVie.ViewModels
             }
         }
 
+        private int _RepeatSearchAmount = 10;
+        public int RepeatSearchAmount
+        {
+            get { return _RepeatSearchAmount; }
+            set
+            {
+                _RepeatSearchAmount = value;
+                OnPropertyChanged("RepeatSearchAmount");
+            }
+        }
+
+        private bool _RepeatSearch;
+        public bool RepeatSearch
+        {
+            get { return _RepeatSearch; }
+            set
+            {
+                _RepeatSearch = value;
+                OnPropertyChanged("RepeatSearch");
+            }
+        }
+
         private DineOption _CurrentPartySize;
         public DineOption CurrentPartySize
         {
@@ -156,23 +178,32 @@ namespace LaVie.ViewModels
             OnPropertyChanged("NotAvailableLog");
         }
 
-        private string _OutputLog = String.Empty;
-        public string OutputLog
+        private string _AvailabilityLogToSend = String.Empty;
+        public string AvailabilityLogToSend
         {
-            get { return _OutputLog; }
+            get { return _AvailabilityLogToSend; }
             set
             {
-                _OutputLog = value;
-                OnPropertyChanged("OutputLog");
+                _AvailabilityLogToSend = value;
+                OnPropertyChanged("AvailabilityLogToSend");
 
             }
         }
 
-        internal void AppendOutputLog(string text)
+        internal void AppendAvailabilityLogToSend(string text)
         {
-            _OutputLog += text + Environment.NewLine;
-            OnPropertyChanged("OutputLog");
+            _AvailabilityLogToSend += text + Environment.NewLine;
+            OnPropertyChanged("AvailabilityLogToSend");
         }
+
+        //for email
+        private string _EmailLogin;
+        public string EmailLogin { get { return _EmailLogin; } set { _EmailLogin = value; OnPropertyChanged("EmailLogin"); } }
+        private string _EmailPassword;
+        public string EmailPassword { get { return _EmailPassword; } set { _EmailPassword = value; OnPropertyChanged("EmailPassword"); } }
+        private bool _SendEmail;
+        public bool SendEmail { get { return _SendEmail; } set { _SendEmail = value; OnPropertyChanged("SendEmail"); } }
+
 
         // Declare the event 
         public event PropertyChangedEventHandler PropertyChanged;

@@ -37,9 +37,6 @@
     <ApplicationIcon>mousebites.ico</ApplicationIcon>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="LaVie.MusicBox">
-      <HintPath>..\..\MusicBox\MusicBox\bin\Debug\LaVie.MusicBox.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Web" />
@@ -62,6 +59,7 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="Libraries\DineSetting.cs" />
+    <Compile Include="Libraries\EmailHelper.cs" />
     <Compile Include="Libraries\HtmlHelper.cs" />
     <Compile Include="Libraries\SearchParameters.cs" />
     <Compile Include="ViewModels\MainViewModel.cs" />
