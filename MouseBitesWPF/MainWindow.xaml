@@ -82,7 +82,7 @@
                 <Label>L:</Label>
                 <TextBox Width="75" Text="{Binding Path=EmailLogin, Mode=TwoWay}"></TextBox>
                 <Label>P:</Label>
-                <TextBox Width="75" Text="{Binding Path=EmailPassword, Mode=TwoWay}"></TextBox>
+                <PasswordBox Width="75" x:Name="EmailPassword"></PasswordBox>
             </WrapPanel>
         </Grid>
         <StackPanel Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Orientation="Horizontal" >

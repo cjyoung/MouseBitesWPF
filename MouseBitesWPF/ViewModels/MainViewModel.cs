@@ -199,8 +199,8 @@ namespace LaVie.ViewModels
         //for email
         private string _EmailLogin;
         public string EmailLogin { get { return _EmailLogin; } set { _EmailLogin = value; OnPropertyChanged("EmailLogin"); } }
-        private string _EmailPassword;
-        public string EmailPassword { get { return _EmailPassword; } set { _EmailPassword = value; OnPropertyChanged("EmailPassword"); } }
+        //private string _EmailPassword;
+        //public string EmailPassword { get { return _EmailPassword; } set { _EmailPassword = value; OnPropertyChanged("EmailPassword"); } }
         private bool _SendEmail;
         public bool SendEmail { get { return _SendEmail; } set { _SendEmail = value; OnPropertyChanged("SendEmail"); } }
 

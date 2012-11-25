@@ -88,7 +88,7 @@ namespace LaVie
 
                     if (MainVM.SendEmail && MainVM.AvailabilityLogToSend.Length > 0)
                     {
-                        EmailHelper.SendEmail(MainVM.EmailLogin, MainVM.EmailPassword, MainVM.AvailabilityLogToSend);
+                        EmailHelper.SendEmail(MainVM.EmailLogin, EmailPassword.Password, MainVM.AvailabilityLogToSend);
                         MainVM.AppendStatusLog("email sent");
                     }
 
