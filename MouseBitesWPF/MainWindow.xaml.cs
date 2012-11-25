@@ -322,5 +322,12 @@ namespace LaVie
             string partySizes = HtmlHelper.getTagContents(result, "makeResParty", "select", "id");
             MainVM.PartySizes = HtmlHelper.ConvertOptionToObject(partySizes);
         }
+
+        private void ClearLogs_Click(object sender, RoutedEventArgs e)
+        {
+            MainVM.AvailableLog = "";
+            MainVM.NotAvailableLog = "";
+            MainVM.StatusLog = "";
+        }
     }
 }
