@@ -28,6 +28,7 @@ namespace LaVie
     public partial class MainWindow : Window
     {
         BackgroundWorker worker = new BackgroundWorker();
+        bool isSearching = false;
 
         public MainWindow()
         {
@@ -47,14 +48,20 @@ namespace LaVie
 
         private void Search_Click(object sender, RoutedEventArgs e)
         {
-
-            if (MainVM.DatesList.Where(b => b.toSearch == true).Count() == 0
-                    || Restaurants.SelectedItem == null
-                    || PartySizes.SelectedItem == null
-                    || Times.SelectedItem == null)
-                MessageBox.Show("Please make sure you've selected a date, restaurant, party size, and dining time before searching");
+            if (isSearching)
+            {
+                MessageBox.Show("A search is currently running, please stop the current one before starting a new one.");
+            }
             else
-                worker.RunWorkerAsync();
+            {
+                if (MainVM.DatesList.Where(b => b.toSearch == true).Count() == 0
+                        || Restaurants.SelectedItem == null
+                        || PartySizes.SelectedItem == null
+                        || Times.SelectedItem == null)
+                    MessageBox.Show("Please make sure you've selected a date, restaurant, party size, and dining time before searching");
+                else
+                    worker.RunWorkerAsync();
+            }
         }
 
         private void StopSearch_Click(object sender, RoutedEventArgs e)
@@ -65,12 +72,15 @@ namespace LaVie
         void worker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
             MainVM.AppendStatusLog("===== thread completed =====");
+            isSearching = false;
             //LaVie.MusicBox.PlayNote(MusicBox.Notes.F4, 200);
             //LaVie.MusicBox.PlayNote(MusicBox.Notes.C4, 200);
         }
 
         private void LaunchSearch(object sender, DoWorkEventArgs e)
         {
+            isSearching = true;
+
             if (!MainVM.RepeatSearch)
             {
                 MainVM.AvailableLog = "";
@@ -301,17 +311,17 @@ namespace LaVie
         {
             SearchParameters sp = new SearchParameters();
 
-            //MainVM.AppendStatusLog("creating cookie jar");
+            MainVM.AppendStatusLog("creating cookie jar");
             CookieContainer cookieJar = new CookieContainer();
 
-            //MainVM.AppendStatusLog("get cookies and initial info");
+            MainVM.AppendStatusLog("get cookies and initial info");
             string result = "";
             cookieJar = getCookiesFromRequest(cookieJar, sp, sp.rootUrl + sp.siteUrl, "", out result, "GET");
 
             string dineObject = HtmlHelper.findJSONObject(result, "WDPRO.dine");
             string viewObject = Regex.Replace(HtmlHelper.findJSONObject(dineObject, "\"view\""), "\"view\"[^:]*:", "");
 
-            //MainVM.AppendStatusLog(viewObject);
+            MainVM.AppendStatusLog(viewObject);
 
             JavaScriptSerializer ser = new JavaScriptSerializer();
             MainVM.DineView = ser.Deserialize<DineSetting>(viewObject);
