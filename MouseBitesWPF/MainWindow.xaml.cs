@@ -29,6 +29,7 @@ namespace LaVie
     {
         BackgroundWorker worker = new BackgroundWorker();
         bool isSearching = false;
+        const bool DEBUG_MODE = true;
 
         public MainWindow()
         {
@@ -275,9 +276,12 @@ namespace LaVie
             }
             try
             {
+                if (DEBUG_MODE) MainVM.AppendStatusLog("debug: starting http request");
                 HttpWebResponse webResponse = (HttpWebResponse)request.GetResponse();
+                if (DEBUG_MODE) MainVM.AppendStatusLog(string.Format("debug: code: {0}; status: {1}", webResponse.StatusCode, webResponse.StatusDescription));
                 Stream responseStream = webResponse.GetResponseStream();
                 StreamReader responseStreamReader = new StreamReader(responseStream);
+                if (DEBUG_MODE) MainVM.AppendStatusLog("debug: reading stream from response object");
                 result = responseStreamReader.ReadToEnd();
                 foreach (Cookie item in webResponse.Cookies)
                 {
@@ -311,17 +315,19 @@ namespace LaVie
         {
             SearchParameters sp = new SearchParameters();
 
-            MainVM.AppendStatusLog("creating cookie jar");
+            if (DEBUG_MODE) MainVM.AppendStatusLog("creating cookie jar");
             CookieContainer cookieJar = new CookieContainer();
 
-            MainVM.AppendStatusLog("get cookies and initial info");
+            if (DEBUG_MODE) MainVM.AppendStatusLog("get cookies and initial info");
             string result = "";
             cookieJar = getCookiesFromRequest(cookieJar, sp, sp.rootUrl + sp.siteUrl, "", out result, "GET");
+
+            if (DEBUG_MODE) MainVM.AppendStatusLog(string.Format("result size: {0}", result.Length));
 
             string dineObject = HtmlHelper.findJSONObject(result, "WDPRO.dine");
             string viewObject = Regex.Replace(HtmlHelper.findJSONObject(dineObject, "\"view\""), "\"view\"[^:]*:", "");
 
-            MainVM.AppendStatusLog(viewObject);
+            if (DEBUG_MODE) MainVM.AppendStatusLog(viewObject);
 
             JavaScriptSerializer ser = new JavaScriptSerializer();
             MainVM.DineView = ser.Deserialize<DineSetting>(viewObject);
