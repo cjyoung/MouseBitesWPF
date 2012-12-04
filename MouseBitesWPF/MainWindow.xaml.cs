@@ -283,6 +283,7 @@ namespace LaVie
                 StreamReader responseStreamReader = new StreamReader(responseStream);
                 if (DEBUG_MODE) MainVM.AppendStatusLog("debug: reading stream from response object");
                 result = responseStreamReader.ReadToEnd();
+                if (result.Contains("systemErrorMessageTitle")) throw new Exception(HtmlHelper.getTagContents(result, "systemErrorMessageTitle", "h4", "id"));
                 foreach (Cookie item in webResponse.Cookies)
                 {
                     cookieJar.Add(item);
@@ -292,7 +293,7 @@ namespace LaVie
             }
             catch (Exception ex)
             {
-                MainVM.AppendStatusLog(string.Format("Error: {0}\nPress any key to continue", ex.Message));
+                MainVM.AppendStatusLog(string.Format("Error: {0}", ex.Message));
                 result = "error";
             }
             return cookieJar;
@@ -324,19 +325,24 @@ namespace LaVie
 
             if (DEBUG_MODE) MainVM.AppendStatusLog(string.Format("result size: {0}", result.Length));
 
-            string dineObject = HtmlHelper.findJSONObject(result, "WDPRO.dine");
-            string viewObject = Regex.Replace(HtmlHelper.findJSONObject(dineObject, "\"view\""), "\"view\"[^:]*:", "");
+            if (result.Contains("WDPRO.dine"))
+            {
+                string dineObject = HtmlHelper.findJSONObject(result, "WDPRO.dine");
+                string viewObject = Regex.Replace(HtmlHelper.findJSONObject(dineObject, "\"view\""), "\"view\"[^:]*:", "");
 
-            if (DEBUG_MODE) MainVM.AppendStatusLog(viewObject);
+                if (DEBUG_MODE) MainVM.AppendStatusLog(viewObject);
 
-            JavaScriptSerializer ser = new JavaScriptSerializer();
-            MainVM.DineView = ser.Deserialize<DineSetting>(viewObject);
+                JavaScriptSerializer ser = new JavaScriptSerializer();
+                MainVM.DineView = ser.Deserialize<DineSetting>(viewObject);
 
-            string timesList = HtmlHelper.getTagContents(result, "makeResTime", "select", "id");
-            MainVM.TimesList = HtmlHelper.ConvertOptionToObject(timesList);
+                string timesList = HtmlHelper.getTagContents(result, "makeResTime", "select", "id");
+                MainVM.TimesList = HtmlHelper.ConvertOptionToObject(timesList);
 
-            string partySizes = HtmlHelper.getTagContents(result, "makeResParty", "select", "id");
-            MainVM.PartySizes = HtmlHelper.ConvertOptionToObject(partySizes);
+                string partySizes = HtmlHelper.getTagContents(result, "makeResParty", "select", "id");
+                MainVM.PartySizes = HtmlHelper.ConvertOptionToObject(partySizes);
+            }
+            else
+                MainVM.AppendStatusLog("Error: could not retrieve date and restaurant info");
         }
 
         private void ClearLogs_Click(object sender, RoutedEventArgs e)
