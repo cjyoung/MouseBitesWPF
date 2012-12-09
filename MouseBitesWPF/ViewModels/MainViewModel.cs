@@ -53,7 +53,8 @@ namespace LaVie.ViewModels
             //maxDate from DineView.search.maxDate is more than 180 days out, which gives errors when searching for times on them
             DateTime maxdate = DateTime.ParseExact(_DineView.search.maxGuestBookDate, "MMMM, dd, yyyy", System.Globalization.CultureInfo.InvariantCulture);
             DatesList = new ObservableCollection<SearchDate>(
-                (from d in Enumerable.Range(0, (int)Math.Round(maxdate.Subtract(mindate).TotalDays + 1))
+                //start from tomorrow, as searching for today will give errors (thusly, we don't need to add 1 to the length)
+                (from d in Enumerable.Range(1, (int)Math.Round(maxdate.Subtract(mindate).TotalDays /*+ 1*/)) 
                 .Select(offset => mindate.AddDays(offset))
                  select
                      new SearchDate { date = d.Date, toSearch = _defaultToSearchValue })
@@ -101,6 +102,17 @@ namespace LaVie.ViewModels
             {
                 _RepeatSearch = value;
                 OnPropertyChanged("RepeatSearch");
+            }
+        }
+
+        private bool _VerboseLogging = true;
+        public bool VerboseLogging
+        {
+            get { return _VerboseLogging; }
+            set
+            {
+                _VerboseLogging = value;
+                OnPropertyChanged("VerboseLogging");
             }
         }
 

@@ -29,7 +29,6 @@ namespace LaVie
     {
         BackgroundWorker worker = new BackgroundWorker();
         bool isSearching = false;
-        const bool DEBUG_MODE = true;
 
         public MainWindow()
         {
@@ -141,6 +140,7 @@ namespace LaVie
                 (
                     from d in MainVM.DatesList
                     where d.toSearch == true
+                            && DateTime.Compare(d.date, DateTime.Now) >= 0 //only search dates in the future
                     select d.date.ToString("MM'/'dd'/'yyyy")
                 ))
             {
@@ -276,12 +276,12 @@ namespace LaVie
             }
             try
             {
-                if (DEBUG_MODE) MainVM.AppendStatusLog("debug: starting http request");
+                if (MainVM.VerboseLogging) MainVM.AppendStatusLog("debug: starting http request");
                 HttpWebResponse webResponse = (HttpWebResponse)request.GetResponse();
-                if (DEBUG_MODE) MainVM.AppendStatusLog(string.Format("debug: code: {0}; status: {1}", webResponse.StatusCode, webResponse.StatusDescription));
+                if (MainVM.VerboseLogging) MainVM.AppendStatusLog(string.Format("debug: code: {0}; status: {1}", webResponse.StatusCode, webResponse.StatusDescription));
                 Stream responseStream = webResponse.GetResponseStream();
                 StreamReader responseStreamReader = new StreamReader(responseStream);
-                if (DEBUG_MODE) MainVM.AppendStatusLog("debug: reading stream from response object");
+                if (MainVM.VerboseLogging) MainVM.AppendStatusLog("debug: reading stream from response object");
                 result = responseStreamReader.ReadToEnd();
                 if (result.Contains("systemErrorMessageTitle")) throw new Exception(HtmlHelper.getTagContents(result, "systemErrorMessageTitle", "h4", "id"));
                 foreach (Cookie item in webResponse.Cookies)
@@ -316,21 +316,21 @@ namespace LaVie
         {
             SearchParameters sp = new SearchParameters();
 
-            if (DEBUG_MODE) MainVM.AppendStatusLog("creating cookie jar");
+            if (MainVM.VerboseLogging) MainVM.AppendStatusLog("creating cookie jar");
             CookieContainer cookieJar = new CookieContainer();
 
-            if (DEBUG_MODE) MainVM.AppendStatusLog("get cookies and initial info");
+            if (MainVM.VerboseLogging) MainVM.AppendStatusLog("get cookies and initial info");
             string result = "";
             cookieJar = getCookiesFromRequest(cookieJar, sp, sp.rootUrl + sp.siteUrl, "", out result, "GET");
 
-            if (DEBUG_MODE) MainVM.AppendStatusLog(string.Format("result size: {0}", result.Length));
+            if (MainVM.VerboseLogging) MainVM.AppendStatusLog(string.Format("result size: {0}", result.Length));
 
             if (result.Contains("WDPRO.dine"))
             {
                 string dineObject = HtmlHelper.findJSONObject(result, "WDPRO.dine");
                 string viewObject = Regex.Replace(HtmlHelper.findJSONObject(dineObject, "\"view\""), "\"view\"[^:]*:", "");
 
-                if (DEBUG_MODE) MainVM.AppendStatusLog(viewObject);
+                if (MainVM.VerboseLogging) MainVM.AppendStatusLog(viewObject);
 
                 JavaScriptSerializer ser = new JavaScriptSerializer();
                 MainVM.DineView = ser.Deserialize<DineSetting>(viewObject);

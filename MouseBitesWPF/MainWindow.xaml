@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:viewModel="clr-namespace:LaVie.ViewModels"
         xmlns:diag="clr-namespace:System.Diagnostics;assembly=WindowsBase"
-        Title="MainWindow" Height="550" MinWidth="650" Width="650" Icon="mousebites.ico">
+        Title="Mouse Bites" Height="550" MinWidth="650" Width="650" Icon="mousebites.ico">
     <Window.DataContext>
         <viewModel:MainViewModel x:Name="MainVM" />
     </Window.DataContext>
@@ -93,7 +93,14 @@
         <StackPanel Grid.Row="1" Grid.Column="3" Orientation="Horizontal" FlowDirection="RightToLeft">
             <Button x:Name="Exit" Content="Exit" Width="75" Click="Exit_Click" Margin="5"/>
         </StackPanel>
-        <Label Grid.Column="1" Grid.Row="2">Status</Label>
+        <Grid Grid.Column="1" Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1*" />
+                <ColumnDefinition Width="2*" />
+            </Grid.ColumnDefinitions>
+            <Label Grid.Column="0">Status</Label>
+            <CheckBox VerticalAlignment="Center" IsChecked="{Binding Path=VerboseLogging, Mode=TwoWay}"  Grid.Column="1" Content="Verbose Logging" />
+        </Grid>
         <TextBox Background="Azure" x:Name="Status" Grid.Column="1" Grid.Row="3" IsReadOnly="True" Text="{Binding StatusLog, Mode=OneWay}" ScrollViewer.CanContentScroll="True" VerticalScrollBarVisibility="Auto" TextChanged="Status_TextChanged" TextWrapping="WrapWithOverflow" />
 
         <Label Grid.Column="2" Grid.Row="2">Not Available</Label>
