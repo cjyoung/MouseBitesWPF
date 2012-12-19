@@ -125,14 +125,13 @@ namespace LaVie
             //LaVie.MusicBox.StartUpSong();
 
             string convoId = "";
-            SearchParameters sp = new SearchParameters();
 
             MainVM.AppendStatusLog("creating cookie jar");
             CookieContainer cookieJar = new CookieContainer();
 
             MainVM.AppendStatusLog("first request, to get cookies and initial info");
             string result = "";
-            cookieJar = getCookiesFromRequest(cookieJar, sp, sp.rootUrl + sp.siteUrl, "", out result, "GET");
+            cookieJar = getCookiesFromRequest(cookieJar, SearchParameters.rootUrl + SearchParameters.siteUrl, "", out result, "GET");
 
 
             MainVM.AppendStatusLog("conducting search");
@@ -145,14 +144,14 @@ namespace LaVie
                 ))
             {
                 MainVM.AppendStatusLog(string.Format("searching on {0}...", searchDate));
-                ConductSearch(notes, sp, searchDate, ref cookieJar, out convoId);
+                ConductSearch(notes, searchDate, ref cookieJar, out convoId);
                 if (worker.CancellationPending) return;
             }
 
             MainVM.AppendStatusLog("finished searching");
         }
 
-        private void ConductSearch(Dictionary<string, int> notes, SearchParameters searchParameters, string targetDate, ref CookieContainer cookieJar, out string convoId)
+        private void ConductSearch(Dictionary<string, int> notes, string targetDate, ref CookieContainer cookieJar, out string convoId)
         {
             string postString = string.Format("webBindCommandName=tableServiceSearchForm" +
                                                 "&mode=async&_eventId=SubmitDiningSearch" +
@@ -175,25 +174,30 @@ namespace LaVie
             string result;
             MainVM.StatusLog += "second request, to get conversation id: ";
             CookieContainer cookies = cookieJar;
-            cookieJar = getCookiesFromRequest(cookies, searchParameters, searchParameters.rootUrl + searchParameters.siteUrl, postString, out result);
+            cookieJar = getCookiesFromRequest(cookies, SearchParameters.rootUrl + SearchParameters.siteUrl, postString, out result);
             convoId = Regex.Match(result, "ConversationId\":\"([^\"]*)\"").Groups[1].Value;
             MainVM.AppendStatusLog(string.Format("{0}", convoId));
             string nextURL = Regex.Match(result, "NextURL\":\"([^\"]*)\"").Groups[1].Value.Replace("\\/", "/");
             string redirectURL = "";
-            while (redirectURL == "")
+            int attempt = 0;
+            while (redirectURL == "" && attempt < SearchParameters.maxAttempts)
             {
                 if (worker.CancellationPending) return;
                 System.Threading.Thread.Sleep(1000);
                 MainVM.AppendStatusLog("searching...");
-                cookieJar = getCookiesFromRequest(cookieJar, searchParameters, searchParameters.rootUrl + nextURL, postString, out result, "GET", convoId);
+                cookieJar = getCookiesFromRequest(cookieJar, SearchParameters.rootUrl + nextURL, postString, out result, "GET", convoId);
                 redirectURL = Regex.Match(result, "RedirectURL\":\"([^\"]*)\"").Groups[1].Value.Replace("\\/", "/");
                 if (result == "error") redirectURL = "error";
+                
+                attempt++;
             }
+
+            if (attempt >= SearchParameters.maxAttempts) redirectURL = "error";
 
             if (redirectURL != "error")
             {
                 MainVM.AppendStatusLog("getting results page");
-                cookieJar = getCookiesFromRequest(cookieJar, searchParameters, searchParameters.rootUrl + redirectURL, postString, out result, "GET");
+                cookieJar = getCookiesFromRequest(cookieJar, SearchParameters.rootUrl + redirectURL, postString, out result, "GET");
 
                 MainVM.AppendStatusLog(new string('-', 25));
                 string r = "";
@@ -251,12 +255,12 @@ namespace LaVie
             return altTimes;
         }
 
-        private CookieContainer getCookiesFromRequest(CookieContainer cookieJar, SearchParameters searchParameters, string url, string postString, out string result, string method = "POST", string conversationid = "")
+        private CookieContainer getCookiesFromRequest(CookieContainer cookieJar, string url, string postString, out string result, string method = "POST", string conversationid = "")
         {
             byte[] postBytes = Encoding.ASCII.GetBytes(postString);
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
             request.Method = method;
-            request.Referer = searchParameters.rootUrl + searchParameters.siteUrl;
+            request.Referer = SearchParameters.rootUrl + SearchParameters.siteUrl;
             request.Headers.Add("X-Requested-With", "XMLHttpRequest");
             request.UserAgent = "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)";
             request.CookieContainer = cookieJar;
@@ -314,14 +318,12 @@ namespace LaVie
 
         private void LoadDropDownOptions(object sender, DoWorkEventArgs e)
         {
-            SearchParameters sp = new SearchParameters();
-
             if (MainVM.VerboseLogging) MainVM.AppendStatusLog("creating cookie jar");
             CookieContainer cookieJar = new CookieContainer();
 
             if (MainVM.VerboseLogging) MainVM.AppendStatusLog("get cookies and initial info");
             string result = "";
-            cookieJar = getCookiesFromRequest(cookieJar, sp, sp.rootUrl + sp.siteUrl, "", out result, "GET");
+            cookieJar = getCookiesFromRequest(cookieJar, SearchParameters.rootUrl + SearchParameters.siteUrl, "", out result, "GET");
 
             if (MainVM.VerboseLogging) MainVM.AppendStatusLog(string.Format("result size: {0}", result.Length));
 

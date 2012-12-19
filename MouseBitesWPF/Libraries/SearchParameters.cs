@@ -5,9 +5,10 @@ using System.Text;
 
 namespace LaVie.Libraries
 {
-    class SearchParameters
+    static class SearchParameters
     {
-        internal string rootUrl = "http://disneyworld.disney.go.com";
-        internal string siteUrl = "/reservations/dining/";
+        static internal string rootUrl = "http://disneyworld.disney.go.com";
+        static internal string siteUrl = "/reservations/dining/";
+        static internal int maxAttempts = 15;
     }
 }
