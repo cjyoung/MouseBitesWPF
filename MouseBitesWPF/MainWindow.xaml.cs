@@ -6,6 +6,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -30,9 +31,13 @@ namespace LaVie
         BackgroundWorker worker = new BackgroundWorker();
         bool isSearching = false;
 
+        /// <summary>
+        /// Constructor
+        /// </summary>
         public MainWindow()
         {
             InitializeComponent();
+            MainVM.Initialize();
             worker.DoWork += new DoWorkEventHandler(LaunchSearch);
             worker.RunWorkerCompleted += worker_RunWorkerCompleted;
             worker.WorkerSupportsCancellation = true;
@@ -108,7 +113,7 @@ namespace LaVie
                                                             MainVM.RepeatSearchAmount - i));
                         for (int j = 0; j < 60 && !worker.CancellationPending; j++)
                         {
-                            System.Threading.Thread.Sleep(1000);                            
+                            System.Threading.Thread.Sleep(1000);
                         }
                     }
                 }
@@ -188,7 +193,7 @@ namespace LaVie
                 cookieJar = getCookiesFromRequest(cookieJar, SearchParameters.rootUrl + nextURL, postString, out result, "GET", convoId);
                 redirectURL = Regex.Match(result, "RedirectURL\":\"([^\"]*)\"").Groups[1].Value.Replace("\\/", "/");
                 if (result == "error") redirectURL = "error";
-                
+
                 attempt++;
             }
 
@@ -223,7 +228,7 @@ namespace LaVie
                     if (b.Count > 0 && r.Length > 0)
                     {
                         b.Add(r);
-                        foreach (string time in 
+                        foreach (string time in
                             (from a in b.Distinct()
                              orderby DateTime.Parse(a) ascending
                              select a))
@@ -318,40 +323,197 @@ namespace LaVie
 
         private void LoadDropDownOptions(object sender, DoWorkEventArgs e)
         {
-            if (MainVM.VerboseLogging) MainVM.AppendStatusLog("creating cookie jar");
-            CookieContainer cookieJar = new CookieContainer();
-
-            if (MainVM.VerboseLogging) MainVM.AppendStatusLog("get cookies and initial info");
-            string result = "";
-            cookieJar = getCookiesFromRequest(cookieJar, SearchParameters.rootUrl + SearchParameters.siteUrl, "", out result, "GET");
+            if (MainVM.VerboseLogging) MainVM.AppendStatusLog("getting initial info");
+            CookieContainer cookieJar = getNewCookieCollection();
+            string result = getOptionsFromSite(cookieJar);
 
             if (MainVM.VerboseLogging) MainVM.AppendStatusLog(string.Format("result size: {0}", result.Length));
 
-            if (result.Contains("WDPRO.dine"))
+            if (result.Contains("partySize"))
             {
-                string dineObject = HtmlHelper.findJSONObject(result, "WDPRO.dine");
-                string viewObject = Regex.Replace(HtmlHelper.findJSONObject(dineObject, "\"view\""), "\"view\"[^:]*:", "");
+                DataContractJsonSerializer ser = new DataContractJsonSerializer(typeof(DineRestaurants));
 
-                if (MainVM.VerboseLogging) MainVM.AppendStatusLog(viewObject);
-
-                JavaScriptSerializer ser = new JavaScriptSerializer();
-                MainVM.DineView = ser.Deserialize<DineSetting>(viewObject);
-
-                string timesList = HtmlHelper.getTagContents(result, "makeResTime", "select", "id");
+                string timesList = HtmlHelper.getTagContents(result, "diningAvailabilityForm-searchTime", "select", "id");
                 MainVM.TimesList = HtmlHelper.ConvertOptionToObject(timesList);
 
-                string partySizes = HtmlHelper.getTagContents(result, "makeResParty", "select", "id");
+                string partySizes = HtmlHelper.getTagContents(result, "partySize", "select", "id");
                 MainVM.PartySizes = HtmlHelper.ConvertOptionToObject(partySizes);
+
+                string restaurants = getRestaurantListFromSite(cookieJar);
+                MemoryStream ms = new MemoryStream(Encoding.Unicode.GetBytes(restaurants));
+                DineRestaurants restaurantsObject = ser.ReadObject(ms) as DineRestaurants;
+                MainVM.Restaurants = new ObservableCollection<DineOption>
+                    (from rest in restaurantsObject.restaurants
+                    orderby rest.name
+                    select rest);
             }
             else
+            {
                 MainVM.AppendStatusLog("Error: could not retrieve date and restaurant info");
+            }
         }
 
+        /// <summary>
+        /// Clear logs
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void ClearLogs_Click(object sender, RoutedEventArgs e)
         {
             MainVM.AvailableLog = "";
             MainVM.NotAvailableLog = "";
             MainVM.StatusLog = "";
+        }
+
+        /// <summary>
+        /// Creates a new Cookie Collection from site
+        /// </summary>
+        /// <returns>New Cookie Collection from site</returns>
+        private CookieContainer getNewCookieCollection()
+        {
+            CookieContainer cookieJar = new CookieContainer();
+            cookieJar = new CookieContainer();
+
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(SearchParameters.rootUrl + SearchParameters.siteUrl);
+            request.Method = "GET";
+            request.Headers.Add("X-Requested-With", "XMLHttpRequest");
+            request.UserAgent = "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)";
+            request.CookieContainer = cookieJar;
+            try
+            {
+                if (MainVM.VerboseLogging) MainVM.AppendStatusLog("debug: starting http request");
+                HttpWebResponse webResponse = (HttpWebResponse)request.GetResponse();
+                if (MainVM.VerboseLogging) MainVM.AppendStatusLog(string.Format("debug: code: {0}; status: {1}", webResponse.StatusCode, webResponse.StatusDescription));
+                Stream responseStream = webResponse.GetResponseStream();
+                StreamReader responseStreamReader = new StreamReader(responseStream);
+                if (MainVM.VerboseLogging) MainVM.AppendStatusLog("debug: reading in response");
+                String result = responseStreamReader.ReadToEnd();
+                if (result.Contains("systemErrorMessageTitle")) throw new Exception(HtmlHelper.getTagContents(result, "systemErrorMessageTitle", "h4", "id"));
+
+                if (MainVM.VerboseLogging) MainVM.StatusLog += "debug: adding cookies";
+                foreach (Cookie item in webResponse.Cookies)
+                {
+                    if (MainVM.VerboseLogging) MainVM.StatusLog += ".";
+                    cookieJar.Add(item);
+                }
+                if (MainVM.VerboseLogging) MainVM.StatusLog += "\n";
+                responseStream.Close();
+                webResponse.Close();
+            }
+            catch (Exception ex)
+            {
+                MainVM.AppendStatusLog(string.Format("Error: {0}", ex.Message));
+            }
+
+            return cookieJar;
+        }
+
+        /// <summary>
+        /// Get initial options from the web site
+        /// </summary>
+        /// <returns>string of the result</returns>
+        private String getOptionsFromSite(CookieContainer cookieJar)
+        {
+            return GetRequest(SearchParameters.rootUrl + SearchParameters.siteUrl, cookieJar);
+        }
+
+        /// <summary>
+        /// Get restaurant list from the web site
+        /// </summary>
+        /// <returns>string of the result</returns>
+        private String getRestaurantListFromSite(CookieContainer cookieJar)
+        {
+            return GetRequest(SearchParameters.rootUrl + SearchParameters.restaurantListUrl, cookieJar);
+        }
+
+        private String GetRequest(String URL, CookieContainer cookieJar)
+        {
+            String result = "";
+
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(URL);
+            request.Referer = SearchParameters.rootUrl + SearchParameters.siteUrl;
+            request.Method = "GET";
+            request.Headers.Add("X-Requested-With", "XMLHttpRequest");
+            request.UserAgent = "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)";
+            request.CookieContainer = cookieJar;
+
+            try
+            {
+                if (MainVM.VerboseLogging) MainVM.AppendStatusLog("debug: starting http request");
+                HttpWebResponse webResponse = (HttpWebResponse)request.GetResponse();
+                if (MainVM.VerboseLogging) MainVM.AppendStatusLog(string.Format("debug: code: {0}; status: {1}", webResponse.StatusCode, webResponse.StatusDescription));
+                Stream responseStream = webResponse.GetResponseStream();
+                StreamReader responseStreamReader = new StreamReader(responseStream);
+                if (MainVM.VerboseLogging) MainVM.AppendStatusLog("debug: reading stream from response object");
+                result = responseStreamReader.ReadToEnd();
+                if (result.Contains("systemErrorMessageTitle")) throw new Exception(HtmlHelper.getTagContents(result, "systemErrorMessageTitle", "h4", "id"));
+                responseStream.Close();
+                webResponse.Close();
+            }
+            catch (Exception ex)
+            {
+                MainVM.AppendStatusLog(string.Format("Error: {0}", ex.Message));
+                result = "error";
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// Perform a search of the provided type
+        /// </summary>
+        /// <param name="searchType">Enum of which type of search to perform</param>
+        /// <param name="cookieJar">Cookie Container to use</param>
+        /// <returns>String of result</returns>
+        private String performSearch(SearchType searchType, CookieContainer cookieJar)
+        {
+            String result = "";
+
+            String postString = "searchDate=2013-04-26&searchTime=19%3A00&partySize=2&skipPricing=true";
+
+            byte[] postBytes = Encoding.ASCII.GetBytes(postString);
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(SearchParameters.rootUrl + searchType.ToString());
+            request.Method = "POST";
+            request.Referer = SearchParameters.rootUrl + SearchParameters.siteUrl;
+            request.Headers.Add("X-Requested-With", "XMLHttpRequest");
+            request.UserAgent = "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)";
+            request.CookieContainer = cookieJar;
+            //if (conversationid != "")
+            //{
+            //    request.Headers.Add("X-Conversation-Id", conversationid);
+            //    request.Headers.Add("X-Service-Request", "type=poll, attempt=1");
+            //}
+            if (request.Method == "POST")
+            {
+                request.ContentType = "application/x-www-form-urlencoded";
+                request.ContentLength = postBytes.Length;
+                request.Headers.Add("Pragma", "no-cache");
+                Stream postStream = request.GetRequestStream();
+                postStream.Write(postBytes, 0, postBytes.Length);
+                postStream.Close();
+            }
+            try
+            {
+                if (MainVM.VerboseLogging) MainVM.AppendStatusLog("debug: starting http request");
+                HttpWebResponse webResponse = (HttpWebResponse)request.GetResponse();
+                if (MainVM.VerboseLogging) MainVM.AppendStatusLog(string.Format("debug: code: {0}; status: {1}", webResponse.StatusCode, webResponse.StatusDescription));
+                Stream responseStream = webResponse.GetResponseStream();
+                StreamReader responseStreamReader = new StreamReader(responseStream);
+                if (MainVM.VerboseLogging) MainVM.AppendStatusLog("debug: reading stream from response object");
+                result = responseStreamReader.ReadToEnd();
+                if (result.Contains("systemErrorMessageTitle")) throw new Exception(HtmlHelper.getTagContents(result, "systemErrorMessageTitle", "h4", "id"));
+                foreach (Cookie item in webResponse.Cookies)
+                {
+                    cookieJar.Add(item);
+                }
+                responseStream.Close();
+                webResponse.Close();
+            }
+            catch (Exception ex)
+            {
+                MainVM.AppendStatusLog(string.Format("Error: {0}", ex.Message));
+                result = "error";
+            }
+            return result;
         }
     }
 }

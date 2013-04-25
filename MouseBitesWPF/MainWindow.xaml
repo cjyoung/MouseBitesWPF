@@ -54,7 +54,7 @@
             </Grid.ColumnDefinitions>
             <Label Grid.Row="0" Grid.Column="0">Restaurant</Label>
             <ComboBox x:Name="Restaurants" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch"
-                ItemsSource="{Binding Path=DineView.restaurants.list}"
+                ItemsSource="{Binding Path=Restaurants}"
                 SelectedValue="{Binding Path=CurrentRestaurant, Mode=TwoWay}"
                 DisplayMemberPath="name"
             />

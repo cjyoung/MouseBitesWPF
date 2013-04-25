@@ -13,6 +13,22 @@ namespace LaVie.ViewModels
     {
         private bool _defaultToSearchValue = false;
 
+        internal void Initialize()
+        {
+            CreateDatesList();
+        }
+
+        private ObservableCollection<DineOption> _Restaurants;
+        public ObservableCollection<DineOption> Restaurants
+        {
+            get { return _Restaurants; }
+            set
+            {
+                _Restaurants = value;
+                OnPropertyChanged("Restaurants");
+            }
+        }
+
         private ObservableCollection<DineOption> _PartySizes;
         public ObservableCollection<DineOption> PartySizes
         {
@@ -35,23 +51,10 @@ namespace LaVie.ViewModels
             }
         }
 
-        private DineSetting _DineView;
-        public DineSetting DineView
+        private void CreateDatesList()
         {
-            get { return _DineView; }
-            set
-            {
-                _DineView = value;
-                UpdateListOfDatesAvailableToSearch();
-                OnPropertyChanged("DineView");
-            }
-        }
-
-        private void UpdateListOfDatesAvailableToSearch()
-        {
-            DateTime mindate = DateTime.ParseExact(_DineView.search.minDate, "MMMM, dd, yyyy", System.Globalization.CultureInfo.InvariantCulture);
-            //maxDate from DineView.search.maxDate is more than 180 days out, which gives errors when searching for times on them
-            DateTime maxdate = DateTime.ParseExact(_DineView.search.maxGuestBookDate, "MMMM, dd, yyyy", System.Globalization.CultureInfo.InvariantCulture);
+            DateTime mindate = DateTime.Now.AddDays(SearchParameters.minDate);
+            DateTime maxdate = DateTime.Now.AddDays(SearchParameters.maxDate);
             DatesList = new ObservableCollection<SearchDate>(
                 //start from tomorrow, as searching for today will give errors (thusly, we don't need to add 1 to the length)
                 (from d in Enumerable.Range(1, (int)Math.Round(maxdate.Subtract(mindate).TotalDays /*+ 1*/)) 
