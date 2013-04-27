@@ -40,7 +40,7 @@
                 </ListBox.ItemTemplate>
             </ListBox>
         </Grid>
-        
+
         <Grid Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="3">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
@@ -58,18 +58,30 @@
                 SelectedValue="{Binding Path=CurrentRestaurant, Mode=TwoWay}"
                 DisplayMemberPath="name"
             />
+            <Label Name="PleaseWaitRestaurant" Grid.Row="0" Grid.Column="1" 
+                    Content="{Binding Path=LoadingMessage, Mode=TwoWay}"
+                   Visibility="{Binding Path=LoadingMessageVisibility, Mode=TwoWay}"
+                   />
             <Label Grid.Row="1" Grid.Column="0">Party Size</Label>
             <ComboBox x:Name="PartySizes" Grid.Row="1" Grid.Column="1" HorizontalAlignment="Stretch"
                 ItemsSource="{Binding Path=PartySizes}"
                 SelectedValue="{Binding Path=CurrentPartySize, Mode=TwoWay}"
                 DisplayMemberPath="name"
             />
+            <Label Grid.Row="1" Grid.Column="1" 
+                    Content="{Binding Path=LoadingMessage, Mode=TwoWay}"
+                   Visibility="{Binding Path=LoadingMessageVisibility, Mode=TwoWay}"
+                   />
             <Label Grid.Row="2" Grid.Column="0">Time</Label>
             <ComboBox x:Name="Times" Grid.Row="2" Grid.Column="1" HorizontalAlignment="Stretch"
                 ItemsSource="{Binding Path=TimesList}"
                 SelectedValue="{Binding Path=CurrentTime, Mode=TwoWay}"
-                DisplayMemberPath="name"                      
+                DisplayMemberPath="name"      
             />
+            <Label Grid.Row="2" Grid.Column="1" 
+                    Content="{Binding Path=LoadingMessage, Mode=TwoWay}"
+                   Visibility="{Binding Path=LoadingMessageVisibility, Mode=TwoWay}"
+                   />
             <WrapPanel Grid.Row="0" Grid.Column="2">
                 <CheckBox Margin="5,0,0,0" VerticalAlignment="Center" IsChecked="{Binding Path=RepeatSearch, Mode=TwoWay}" />
                 <Label>Repeat search every</Label>

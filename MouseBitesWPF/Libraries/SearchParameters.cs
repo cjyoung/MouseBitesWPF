@@ -9,9 +9,10 @@ namespace LaVie.Libraries
     {
         static internal string rootUrl = "https://disneyworld.disney.go.com";
         static internal string siteUrl = "/dining/";
-        static internal int maxAttempts = 15;
 
         static internal string restaurantListUrl = "/api/wdpro/bulk-service/snapshot/WDW-finder-restaurant";
+        static internal string authServerUrl = "/authentication/get-client-token/";
+        static internal string diningSearchUrl = "/finder/dining-availability";
 
         static internal int minDate = 0;
         static internal int maxDate = 180;

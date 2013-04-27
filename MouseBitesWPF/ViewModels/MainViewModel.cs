@@ -6,6 +6,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows;
 
 namespace LaVie.ViewModels
 {
@@ -57,7 +58,7 @@ namespace LaVie.ViewModels
             DateTime maxdate = DateTime.Now.AddDays(SearchParameters.maxDate);
             DatesList = new ObservableCollection<SearchDate>(
                 //start from tomorrow, as searching for today will give errors (thusly, we don't need to add 1 to the length)
-                (from d in Enumerable.Range(1, (int)Math.Round(maxdate.Subtract(mindate).TotalDays /*+ 1*/)) 
+                (from d in Enumerable.Range(1, (int)Math.Round(maxdate.Subtract(mindate).TotalDays /*+ 1*/))
                 .Select(offset => mindate.AddDays(offset))
                  select
                      new SearchDate { date = d.Date, toSearch = _defaultToSearchValue })
@@ -138,6 +139,28 @@ namespace LaVie.ViewModels
             {
                 _CurrentTime = value;
                 OnPropertyChanged("CurrentTime");
+            }
+        }
+
+        private string _LoadingMessage = "Loading, Please Wait...";
+        public string LoadingMessage
+        {
+            get { return _LoadingMessage; }
+            set
+            {
+                _LoadingMessage = value;
+                OnPropertyChanged("LoadingMessage");
+            }
+        }
+
+        private Visibility _LoadingMessageVisibility = System.Windows.Visibility.Visible;
+        public Visibility LoadingMessageVisibility
+        {
+            get { return _LoadingMessageVisibility; }
+            set
+            {
+                _LoadingMessageVisibility = value;
+                OnPropertyChanged("LoadingMessageVisibility");
             }
         }
 

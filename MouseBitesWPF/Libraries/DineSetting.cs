@@ -37,4 +37,14 @@ namespace LaVie.Libraries
         public string name { get; set; }
     }
 
+    [DataContract]
+    public class AuthTicket
+    {
+        [DataMember(Name = "access_token")]
+        public string accessToken { get; set; }
+
+        [DataMember(Name = "expires_in")]
+        public string expiresIn { get; set; }
+    }
+
 }

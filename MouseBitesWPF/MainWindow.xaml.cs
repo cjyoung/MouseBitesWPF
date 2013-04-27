@@ -30,6 +30,8 @@ namespace LaVie
     {
         BackgroundWorker worker = new BackgroundWorker();
         bool isSearching = false;
+        CookieContainer cookieJar = new CookieContainer();
+
 
         /// <summary>
         /// Constructor
@@ -43,7 +45,7 @@ namespace LaVie
             worker.WorkerSupportsCancellation = true;
 
             BackgroundWorker bw = new BackgroundWorker();
-            bw.DoWork += new DoWorkEventHandler(LoadDropDownOptions);
+            bw.DoWork += new DoWorkEventHandler(InitializeData);
             bw.RunWorkerCompleted += worker_RunWorkerCompleted;
             bw.WorkerSupportsCancellation = true;
 
@@ -51,6 +53,11 @@ namespace LaVie
             bw.RunWorkerAsync();
         }
 
+        /// <summary>
+        /// start async search thread
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void Search_Click(object sender, RoutedEventArgs e)
         {
             if (isSearching)
@@ -69,11 +76,21 @@ namespace LaVie
             }
         }
 
+        /// <summary>
+        /// Cancel async search thread
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void StopSearch_Click(object sender, RoutedEventArgs e)
         {
             worker.CancelAsync();
         }
 
+        /// <summary>
+        /// clean up after thread has completed
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         void worker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
         {
             MainVM.AppendStatusLog("===== thread completed =====");
@@ -82,6 +99,11 @@ namespace LaVie
             //LaVie.MusicBox.PlayNote(MusicBox.Notes.C4, 200);
         }
 
+        /// <summary>
+        /// engine for searching, executed as a new thread
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void LaunchSearch(object sender, DoWorkEventArgs e)
         {
             isSearching = true;
@@ -120,6 +142,11 @@ namespace LaVie
             }
         }
 
+        /// <summary>
+        /// actual search event, handles calls to other functions
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void LaunchSearchInstance(object sender, DoWorkEventArgs e)
         {
             DateTime startTime = DateTime.Now;
@@ -129,14 +156,12 @@ namespace LaVie
             MainVM.AppendStatusLog("Initializing...");
             //LaVie.MusicBox.StartUpSong();
 
-            string convoId = "";
+            //string convoId = "";
 
             MainVM.AppendStatusLog("creating cookie jar");
-            CookieContainer cookieJar = new CookieContainer();
 
             MainVM.AppendStatusLog("first request, to get cookies and initial info");
-            string result = "";
-            cookieJar = getCookiesFromRequest(cookieJar, SearchParameters.rootUrl + SearchParameters.siteUrl, "", out result, "GET");
+            string result = getCookiesFromRequest(SearchParameters.rootUrl + SearchParameters.siteUrl, "", "GET");
 
 
             MainVM.AppendStatusLog("conducting search");
@@ -149,99 +174,68 @@ namespace LaVie
                 ))
             {
                 MainVM.AppendStatusLog(string.Format("searching on {0}...", searchDate));
-                ConductSearch(notes, searchDate, ref cookieJar, out convoId);
+                ConductSearch(searchDate);
+                //performSearch(SearchType.TableService);
                 if (worker.CancellationPending) return;
             }
 
             MainVM.AppendStatusLog("finished searching");
         }
 
-        private void ConductSearch(Dictionary<string, int> notes, string targetDate, ref CookieContainer cookieJar, out string convoId)
+        private void ConductSearch(string targetDate)
         {
-            string postString = string.Format("webBindCommandName=tableServiceSearchForm" +
-                                                "&mode=async&_eventId=SubmitDiningSearch" +
-                                                "&locations=" +
-                                                "&cuisines=" +
-                                                "&searchRestaurantName={0}" +
-                                                "&searchRestaurantId={1}" +
-                                                "&searchDate={2}" +
-                                                "&times={3}" +
-                                                "&allAvailableTimes=06%3A30%20am" +
-                                                "&partySizes={4}" +
-                                                "&_onlyShowDiningPlans=on" +
-                                                "&WDW_SchEvts_Global_QQContDine_Link=Search%20for%20a%20Table" +
-                                                "&mode=async",
-                                                    System.Web.HttpUtility.UrlEncode(MainVM.CurrentRestaurant.name),
+            string postString = string.Format("&searchDate={1}" +
+                                                "&skipPricing=true" +
+                                                "&searchTime={2}" +
+                                                "&partySize={3}" +
+                                                "&id={0}" +
+                                                "&type=dining",
                                                     System.Web.HttpUtility.UrlEncode(MainVM.CurrentRestaurant.id),
                                                     System.Web.HttpUtility.UrlEncode(targetDate),
                                                     System.Web.HttpUtility.UrlEncode(MainVM.CurrentTime.id),
                                                     System.Web.HttpUtility.UrlEncode(MainVM.CurrentPartySize.id));
-            string result;
-            MainVM.StatusLog += "second request, to get conversation id: ";
-            CookieContainer cookies = cookieJar;
-            cookieJar = getCookiesFromRequest(cookies, SearchParameters.rootUrl + SearchParameters.siteUrl, postString, out result);
-            convoId = Regex.Match(result, "ConversationId\":\"([^\"]*)\"").Groups[1].Value;
-            MainVM.AppendStatusLog(string.Format("{0}", convoId));
-            string nextURL = Regex.Match(result, "NextURL\":\"([^\"]*)\"").Groups[1].Value.Replace("\\/", "/");
-            string redirectURL = "";
-            int attempt = 0;
-            while (redirectURL == "" && attempt < SearchParameters.maxAttempts)
+
+
+            MainVM.AppendStatusLog("getting results page");
+            string result = getCookiesFromRequest(SearchParameters.rootUrl + SearchParameters.diningSearchUrl, postString, "POST");
+
+            MainVM.AppendStatusLog(new string('-', 25));
+
+            //NOTE - the style of the link will have "selected" if it's a direct hit; we're not going
+            //  to try to get that to work right now - for now we're just going to return results
+            //string r = "";
+            //r = HtmlHelper.getTagContents(result, "SearchFailMessage", "div", "id").Trim();
+            //if (r.Length > 0) MainVM.AppendStatusLog(r);
+            //r = HtmlHelper.getTagContents(result, "reserveFormLabel", "label", "class").Trim();
+            //if (r.Length > 0) MainVM.AppendStatusLog(string.Format("Available Times: {0}", r));
+            List<string> b = ParseAltTimes(result);
+            if (b.Count() > 0) MainVM.AppendStatusLog(string.Format(/*"Alt Times found: {0}"*/"Available Times: {0}", string.Join(", ", b)));
+            MainVM.AppendStatusLog(new string('-', 25));
+
+            if (result.Contains("data-hasavailability=\"\""))
             {
-                if (worker.CancellationPending) return;
-                System.Threading.Thread.Sleep(1000);
-                MainVM.AppendStatusLog("searching...");
-                cookieJar = getCookiesFromRequest(cookieJar, SearchParameters.rootUrl + nextURL, postString, out result, "GET", convoId);
-                redirectURL = Regex.Match(result, "RedirectURL\":\"([^\"]*)\"").Groups[1].Value.Replace("\\/", "/");
-                if (result == "error") redirectURL = "error";
-
-                attempt++;
-            }
-
-            if (attempt >= SearchParameters.maxAttempts) redirectURL = "error";
-
-            if (redirectURL != "error")
-            {
-                MainVM.AppendStatusLog("getting results page");
-                cookieJar = getCookiesFromRequest(cookieJar, SearchParameters.rootUrl + redirectURL, postString, out result, "GET");
-
-                MainVM.AppendStatusLog(new string('-', 25));
-                string r = "";
-                r = HtmlHelper.getTagContents(result, "SearchFailMessage", "div", "id").Trim();
-                if (r.Length > 0) MainVM.AppendStatusLog(r);
-                r = HtmlHelper.getTagContents(result, "reserveFormLabel", "label", "class").Trim();
-                if (r.Length > 0) MainVM.AppendStatusLog(string.Format("Available Times: {0}", r));
-                List<string> b = ParseAltTimes(result);
-                if (b.Count() > 0) MainVM.AppendStatusLog(string.Format("Alt Times found: {0}", string.Join(", ", b)));
-                MainVM.AppendStatusLog(new string('-', 25));
-
-                if (result.Contains("Sorry, we were unable to find available times."))
-                {
-                    MainVM.AppendStatusLog("no times found");
-                    MainVM.AppendNotAvailableLog(string.Format("{0}", System.Web.HttpUtility.UrlDecode(targetDate)));
-                }
-                else
-                {
-                    //LaVie.MusicBox.PlayNote(LaVie.MusicBox.Notes.A4, 500);
-                    MainVM.AppendStatusLog("***** possible success *****");
-                    MainVM.AppendAvailableLog(string.Format("{0}", System.Web.HttpUtility.UrlDecode(targetDate)));
-                    MainVM.AppendAvailabilityLogToSend(string.Format("{0}", System.Web.HttpUtility.UrlDecode(targetDate)));
-                    if (b.Count > 0 && r.Length > 0)
-                    {
-                        b.Add(r);
-                        foreach (string time in
-                            (from a in b.Distinct()
-                             orderby DateTime.Parse(a) ascending
-                             select a))
-                        {
-                            MainVM.AppendAvailableLog(string.Format("- {0}", time));
-                            MainVM.AppendAvailabilityLogToSend(string.Format("- {0}", time));
-                        }
-                    }
-                }
+                MainVM.AppendStatusLog("no times found");
+                MainVM.AppendNotAvailableLog(string.Format("{0}", System.Web.HttpUtility.UrlDecode(targetDate)));
             }
             else
             {
-                MainVM.AppendNotAvailableLog(string.Format("{0} (error)", System.Web.HttpUtility.UrlDecode(targetDate)));
+                //LaVie.MusicBox.PlayNote(LaVie.MusicBox.Notes.A4, 500);
+                MainVM.AppendStatusLog("***** possible success *****");
+                MainVM.AppendAvailableLog(string.Format("{0}", System.Web.HttpUtility.UrlDecode(targetDate)));
+                MainVM.AppendAvailabilityLogToSend(string.Format("{0}", System.Web.HttpUtility.UrlDecode(targetDate)));
+                if (b.Count > 0/* && r.Length > 0*/)
+                {
+                    //b.Add(r);
+                    foreach (string time in
+                        (from a in b.Distinct()
+                         orderby DateTime.Parse(a) ascending
+                         select a))
+                    {
+                        MainVM.AppendAvailableLog(string.Format("- {0}", time));
+                        MainVM.AppendAvailabilityLogToSend(string.Format("- {0}", time));
+                    }
+                }
+
             }
         }
 
@@ -250,18 +244,20 @@ namespace LaVie
             //reserveFormLabel
             List<string> altTimes = new List<string>();
 
-            MatchCollection matches = Regex.Matches(result, "<label[^>]*class=['\"]reserveFormLabel['\"][^>]*>.*", RegexOptions.Singleline & RegexOptions.IgnoreCase);
+            MatchCollection matches = Regex.Matches(result, "<span[^>]*class=['\"]buttonText['\"][^>]*>.*", RegexOptions.Singleline & RegexOptions.IgnoreCase);
 
             foreach (Match match in matches)
             {
-                altTimes.Add(HtmlHelper.getTagContents(match.Groups[0].Value, "reserveFormLabel", "label", "class").Trim());
+                altTimes.Add(HtmlHelper.getTagContents(match.Groups[0].Value, "buttonText", "span", "class").Trim());
             }
 
             return altTimes;
         }
 
-        private CookieContainer getCookiesFromRequest(CookieContainer cookieJar, string url, string postString, out string result, string method = "POST", string conversationid = "")
+        private String getCookiesFromRequest(string url, string postString, string method = "POST")
         {
+            String result = "";
+
             byte[] postBytes = Encoding.ASCII.GetBytes(postString);
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
             request.Method = method;
@@ -269,11 +265,6 @@ namespace LaVie
             request.Headers.Add("X-Requested-With", "XMLHttpRequest");
             request.UserAgent = "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)";
             request.CookieContainer = cookieJar;
-            if (conversationid != "")
-            {
-                request.Headers.Add("X-Conversation-Id", conversationid);
-                request.Headers.Add("X-Service-Request", "type=poll, attempt=1");
-            }
             if (method == "POST")
             {
                 request.ContentType = "application/x-www-form-urlencoded";
@@ -305,7 +296,7 @@ namespace LaVie
                 MainVM.AppendStatusLog(string.Format("Error: {0}", ex.Message));
                 result = "error";
             }
-            return cookieJar;
+            return result;
         }
 
         private void Status_TextChanged(object sender, TextChangedEventArgs e)
@@ -321,11 +312,19 @@ namespace LaVie
             Application.Current.Shutdown();
         }
 
-        private void LoadDropDownOptions(object sender, DoWorkEventArgs e)
+        /// <summary>
+        /// gets options from dining site and uses this information to create the option lists
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void InitializeData(object sender, DoWorkEventArgs e)
         {
             if (MainVM.VerboseLogging) MainVM.AppendStatusLog("getting initial info");
+
+            //get cookie jar
             CookieContainer cookieJar = getNewCookieCollection();
-            string result = getOptionsFromSite(cookieJar);
+
+            string result = getOptionsFromSite();
 
             if (MainVM.VerboseLogging) MainVM.AppendStatusLog(string.Format("result size: {0}", result.Length));
 
@@ -339,16 +338,28 @@ namespace LaVie
                 string partySizes = HtmlHelper.getTagContents(result, "partySize", "select", "id");
                 MainVM.PartySizes = HtmlHelper.ConvertOptionToObject(partySizes);
 
-                string restaurants = getRestaurantListFromSite(cookieJar);
-                MemoryStream ms = new MemoryStream(Encoding.Unicode.GetBytes(restaurants));
-                DineRestaurants restaurantsObject = ser.ReadObject(ms) as DineRestaurants;
-                MainVM.Restaurants = new ObservableCollection<DineOption>
-                    (from rest in restaurantsObject.restaurants
-                    orderby rest.name
-                    select rest);
+                string restaurants = getRestaurantListFromSite();
+                if (restaurants != "error")
+                {
+                    MemoryStream ms = new MemoryStream(Encoding.Unicode.GetBytes(restaurants));
+                    DineRestaurants restaurantsObject = ser.ReadObject(ms) as DineRestaurants;
+                    MainVM.Restaurants = new ObservableCollection<DineOption>
+                        (from rest in restaurantsObject.restaurants
+                         orderby rest.name
+                         select rest);
+
+                    MainVM.LoadingMessage = "";
+                    MainVM.LoadingMessageVisibility = System.Windows.Visibility.Hidden;
+                }
+                else
+                {
+                    MainVM.LoadingMessage = "Error";
+                    MainVM.AppendStatusLog("Error: could not retrieve date and restaurant info");
+                }
             }
             else
             {
+                MainVM.LoadingMessage = "Error";
                 MainVM.AppendStatusLog("Error: could not retrieve date and restaurant info");
             }
         }
@@ -412,21 +423,28 @@ namespace LaVie
         /// Get initial options from the web site
         /// </summary>
         /// <returns>string of the result</returns>
-        private String getOptionsFromSite(CookieContainer cookieJar)
+        private String getOptionsFromSite()
         {
-            return GetRequest(SearchParameters.rootUrl + SearchParameters.siteUrl, cookieJar);
+            return GetRequest(SearchParameters.rootUrl + SearchParameters.siteUrl);
         }
 
         /// <summary>
         /// Get restaurant list from the web site
         /// </summary>
         /// <returns>string of the result</returns>
-        private String getRestaurantListFromSite(CookieContainer cookieJar)
+        private String getRestaurantListFromSite()
         {
-            return GetRequest(SearchParameters.rootUrl + SearchParameters.restaurantListUrl, cookieJar);
+            //to debug - bypass request and load from text files
+            //return System.IO.File.ReadAllText("Files/restaurant.json", Encoding.Default);
+            return GetRequest(SearchParameters.rootUrl + SearchParameters.restaurantListUrl);
         }
 
-        private String GetRequest(String URL, CookieContainer cookieJar)
+        /// <summary>
+        /// generic function for GET requests
+        /// </summary>
+        /// <param name="URL">URL to get</param>
+        /// <returns>String of the response</returns>
+        private String GetRequest(String URL)
         {
             String result = "";
 
@@ -462,58 +480,72 @@ namespace LaVie
         /// Perform a search of the provided type
         /// </summary>
         /// <param name="searchType">Enum of which type of search to perform</param>
-        /// <param name="cookieJar">Cookie Container to use</param>
         /// <returns>String of result</returns>
-        private String performSearch(SearchType searchType, CookieContainer cookieJar)
-        {
-            String result = "";
+        //private String performMultiSearch(SearchType searchType)
+        //{
+        //    String result = "";
+        //    //TODO - construct from request data
+        //    String postString = "searchDate=2013-04-30&searchTime=19%3A00&partySize=2&skipPricing=true";
 
-            String postString = "searchDate=2013-04-26&searchTime=19%3A00&partySize=2&skipPricing=true";
+        //    //get new auth ticket
+        //    AuthTicket ticket = new AuthTicket();
+        //    try
+        //    {
+        //        DataContractJsonSerializer ser = new DataContractJsonSerializer(typeof(AuthTicket));
 
-            byte[] postBytes = Encoding.ASCII.GetBytes(postString);
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(SearchParameters.rootUrl + searchType.ToString());
-            request.Method = "POST";
-            request.Referer = SearchParameters.rootUrl + SearchParameters.siteUrl;
-            request.Headers.Add("X-Requested-With", "XMLHttpRequest");
-            request.UserAgent = "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)";
-            request.CookieContainer = cookieJar;
-            //if (conversationid != "")
-            //{
-            //    request.Headers.Add("X-Conversation-Id", conversationid);
-            //    request.Headers.Add("X-Service-Request", "type=poll, attempt=1");
-            //}
-            if (request.Method == "POST")
-            {
-                request.ContentType = "application/x-www-form-urlencoded";
-                request.ContentLength = postBytes.Length;
-                request.Headers.Add("Pragma", "no-cache");
-                Stream postStream = request.GetRequestStream();
-                postStream.Write(postBytes, 0, postBytes.Length);
-                postStream.Close();
-            }
-            try
-            {
-                if (MainVM.VerboseLogging) MainVM.AppendStatusLog("debug: starting http request");
-                HttpWebResponse webResponse = (HttpWebResponse)request.GetResponse();
-                if (MainVM.VerboseLogging) MainVM.AppendStatusLog(string.Format("debug: code: {0}; status: {1}", webResponse.StatusCode, webResponse.StatusDescription));
-                Stream responseStream = webResponse.GetResponseStream();
-                StreamReader responseStreamReader = new StreamReader(responseStream);
-                if (MainVM.VerboseLogging) MainVM.AppendStatusLog("debug: reading stream from response object");
-                result = responseStreamReader.ReadToEnd();
-                if (result.Contains("systemErrorMessageTitle")) throw new Exception(HtmlHelper.getTagContents(result, "systemErrorMessageTitle", "h4", "id"));
-                foreach (Cookie item in webResponse.Cookies)
-                {
-                    cookieJar.Add(item);
-                }
-                responseStream.Close();
-                webResponse.Close();
-            }
-            catch (Exception ex)
-            {
-                MainVM.AppendStatusLog(string.Format("Error: {0}", ex.Message));
-                result = "error";
-            }
-            return result;
-        }
+        //        string authResult = GetRequest(SearchParameters.rootUrl + SearchParameters.authServerUrl);
+
+        //        MemoryStream ms = new MemoryStream(Encoding.Unicode.GetBytes(authResult));
+        //        ticket = ser.ReadObject(ms) as AuthTicket;
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        MainVM.AppendStatusLog(string.Format("Error: {0}", ex.Message));
+        //        result = "error";
+        //    }
+
+        //    byte[] postBytes = Encoding.ASCII.GetBytes(postString);
+        //    HttpWebRequest request = (HttpWebRequest)WebRequest.Create(SearchParameters.rootUrl + searchType.ToString());
+        //    request.Method = "POST";
+        //    request.Referer = SearchParameters.rootUrl + SearchParameters.siteUrl;
+        //    request.Headers.Add("X-Requested-With", "XMLHttpRequest");
+        //    request.UserAgent = "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)";
+        //    request.CookieContainer = cookieJar;
+
+        //    request.Headers.Add(HttpRequestHeader.Authorization.ToString(), String.Format("BEARER {0}", ticket.accessToken));
+
+        //    if (request.Method == "POST")
+        //    {
+        //        request.ContentType = "application/x-www-form-urlencoded";
+        //        request.ContentLength = postBytes.Length;
+        //        request.Headers.Add("Pragma", "no-cache");
+        //        Stream postStream = request.GetRequestStream();
+        //        postStream.Write(postBytes, 0, postBytes.Length);
+        //        postStream.Close();
+        //    }
+        //    try
+        //    {
+        //        if (MainVM.VerboseLogging) MainVM.AppendStatusLog("debug: starting http request");
+        //        HttpWebResponse webResponse = (HttpWebResponse)request.GetResponse();
+        //        if (MainVM.VerboseLogging) MainVM.AppendStatusLog(string.Format("debug: code: {0}; status: {1}", webResponse.StatusCode, webResponse.StatusDescription));
+        //        Stream responseStream = webResponse.GetResponseStream();
+        //        StreamReader responseStreamReader = new StreamReader(responseStream);
+        //        if (MainVM.VerboseLogging) MainVM.AppendStatusLog("debug: reading stream from response object");
+        //        result = responseStreamReader.ReadToEnd();
+        //        if (result.Contains("systemErrorMessageTitle")) throw new Exception(HtmlHelper.getTagContents(result, "systemErrorMessageTitle", "h4", "id"));
+        //        foreach (Cookie item in webResponse.Cookies)
+        //        {
+        //            cookieJar.Add(item);
+        //        }
+        //        responseStream.Close();
+        //        webResponse.Close();
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        MainVM.AppendStatusLog(string.Format("Error: {0}", ex.Message));
+        //        result = "error";
+        //    }
+        //    return result;
+        //}
     }
 }
