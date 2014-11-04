@@ -163,6 +163,9 @@ namespace LaVie
             MainVM.AppendStatusLog("first request, to get cookies and initial info");
             string result = getCookiesFromRequest(SearchParameters.rootUrl + SearchParameters.siteUrl, "", "GET");
 
+            string pep_csrf = "";
+            Match match = Regex.Match(result, "<input[^>]*name=['\"]pep_csrf['\"][^>]*value=['\"]([^'\"]*)['\"]*[^>]>", RegexOptions.Singleline & RegexOptions.IgnoreCase);
+            pep_csrf = match.Groups[1].ToString();
 
             MainVM.AppendStatusLog("conducting search");
             foreach (string searchDate in
@@ -174,7 +177,7 @@ namespace LaVie
                 ))
             {
                 MainVM.AppendStatusLog(string.Format("searching on {0}...", searchDate));
-                ConductSearch(searchDate);
+                ConductSearch(searchDate, pep_csrf);
                 //performSearch(SearchType.TableService);
                 if (worker.CancellationPending) return;
             }
@@ -182,19 +185,20 @@ namespace LaVie
             MainVM.AppendStatusLog("finished searching");
         }
 
-        private void ConductSearch(string targetDate)
+        private void ConductSearch(string targetDate, string pep_csrf)
         {
             string postString = string.Format("&searchDate={1}" +
                                                 "&skipPricing=true" +
                                                 "&searchTime={2}" +
                                                 "&partySize={3}" +
-                                                "&id={0}" +
-                                                "&type=dining",
+                                                "&id={0}%3BentityType%3Drestaurant" +
+                                                "&type=dining" +
+                                                "&pep_csrf={4}",
                                                     System.Web.HttpUtility.UrlEncode(MainVM.CurrentRestaurant.id),
                                                     System.Web.HttpUtility.UrlEncode(targetDate),
                                                     System.Web.HttpUtility.UrlEncode(MainVM.CurrentTime.id),
-                                                    System.Web.HttpUtility.UrlEncode(MainVM.CurrentPartySize.id));
-
+                                                    System.Web.HttpUtility.UrlEncode(MainVM.CurrentPartySize.id),
+                                                    pep_csrf);
 
             MainVM.AppendStatusLog("getting results page");
             string result = getCookiesFromRequest(SearchParameters.rootUrl + SearchParameters.diningSearchUrl, postString, "POST");
@@ -262,7 +266,7 @@ namespace LaVie
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
             request.Method = method;
             request.Referer = SearchParameters.rootUrl + SearchParameters.siteUrl;
-            request.Headers.Add("X-Requested-With", "XMLHttpRequest");
+            //request.Headers.Add("X-Requested-With", "XMLHttpRequest");
             request.UserAgent = "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)";
             request.CookieContainer = cookieJar;
             if (method == "POST")
@@ -474,6 +478,17 @@ namespace LaVie
                 result = "error";
             }
             return result;
+        }
+
+        private void ReinitData_Click(object sender, RoutedEventArgs e)
+        {
+            BackgroundWorker bw = new BackgroundWorker();
+            bw.DoWork += new DoWorkEventHandler(InitializeData);
+            bw.RunWorkerCompleted += worker_RunWorkerCompleted;
+            bw.WorkerSupportsCancellation = true;
+
+            MainVM.AppendStatusLog("please wait, retrieving dates...");
+            bw.RunWorkerAsync();
         }
 
         /// <summary>

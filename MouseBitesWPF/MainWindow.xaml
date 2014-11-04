@@ -101,6 +101,7 @@
             <Button x:Name="Search" Content="Search" Width="75" Click="Search_Click" Margin="5"/>
             <Button x:Name="StopSearch" Content="Stop Search" Width="75" Click="StopSearch_Click" Margin="5"/>
             <Button x:Name="ClearLogs" Content="Clear Logs" Width="75" Margin="5" Click="ClearLogs_Click"/>
+            <Button x:Name="ReinitData" Content="Re-Init Data" Width="75" Margin="5" Click="ReinitData_Click" />
         </StackPanel>
         <StackPanel Grid.Row="1" Grid.Column="3" Orientation="Horizontal" FlowDirection="RightToLeft">
             <Button x:Name="Exit" Content="Exit" Width="75" Click="Exit_Click" Margin="5"/>
