@@ -173,7 +173,8 @@ namespace LaVie
                     from d in MainVM.DatesList
                     where d.toSearch == true
                             && DateTime.Compare(d.date, DateTime.Now) >= 0 //only search dates in the future
-                    select d.date.ToString("MM'/'dd'/'yyyy")
+                    //select d.date.ToString("MM'/'dd'/'yyyy")
+                    select d.date.ToString("yyyy-MM-dd") //updating to match new date format
                 ))
             {
                 MainVM.AppendStatusLog(string.Format("searching on {0}...", searchDate));
@@ -448,16 +449,38 @@ namespace LaVie
         /// </summary>
         /// <param name="URL">URL to get</param>
         /// <returns>String of the response</returns>
-        private String GetRequest(String URL)
+        private String GetRequest(String URL, bool ticketRequest = false)
         {
             String result = "";
-
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(URL);
             request.Referer = SearchParameters.rootUrl + SearchParameters.siteUrl;
             request.Method = "GET";
             request.Headers.Add("X-Requested-With", "XMLHttpRequest");
             request.UserAgent = "Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64; Trident/5.0)";
             request.CookieContainer = cookieJar;
+
+            if (!ticketRequest)
+            {
+                //adding in authticket - maybe this is needed for the api calls again?
+                AuthTicket ticket = new AuthTicket();
+                try
+                {
+                    DataContractJsonSerializer ser = new DataContractJsonSerializer(typeof(AuthTicket));
+
+                    string authResult = GetRequest(SearchParameters.rootUrl + SearchParameters.authServerUrl, true);
+
+                    MemoryStream ms = new MemoryStream(Encoding.Unicode.GetBytes(authResult));
+                    ticket = ser.ReadObject(ms) as AuthTicket;
+                }
+                catch (Exception ex)
+                {
+                    MainVM.AppendStatusLog(string.Format("Error: {0}", ex.Message));
+                    result = "error";
+                }
+
+                //toss the auth ticket into the mix
+                request.Headers.Add(HttpRequestHeader.Authorization.ToString(), String.Format("BEARER {0}", ticket.accessToken));
+            }
 
             try
             {
