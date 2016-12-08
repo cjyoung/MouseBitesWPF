@@ -225,11 +225,16 @@ namespace LaVie
             else
             {
                 //LaVie.MusicBox.PlayNote(LaVie.MusicBox.Notes.A4, 500);
-                MainVM.AppendStatusLog("***** possible success *****");
-                MainVM.AppendAvailableLog(string.Format("{0}", System.Web.HttpUtility.UrlDecode(targetDate)));
-                MainVM.AppendAvailabilityLogToSend(string.Format("{0}", System.Web.HttpUtility.UrlDecode(targetDate)));
+                bool firstResult = true;
                 if (b.Count > 0/* && r.Length > 0*/)
                 {
+                    if (firstResult)
+                    {
+                        MainVM.AppendStatusLog("***** possible success *****");
+                        MainVM.AppendAvailableLog(string.Format("{0}", System.Web.HttpUtility.UrlDecode(targetDate)));
+                        MainVM.AppendAvailabilityLogToSend(string.Format("{0}", System.Web.HttpUtility.UrlDecode(targetDate)));
+                        firstResult = false;
+                    }
                     //b.Add(r);
                     foreach (string time in
                         (from a in b.Distinct()
@@ -240,7 +245,13 @@ namespace LaVie
                         MainVM.AppendAvailabilityLogToSend(string.Format("- {0}", time));
                     }
                 }
+                else
+                {
+                    MainVM.AppendStatusLog("unable to determine availability");
+                    MainVM.AppendNotAvailableLog(string.Format("{0}", System.Web.HttpUtility.UrlDecode(targetDate)));
+                    MainVM.AppendNotAvailableLog(string.Format("- error?"));
 
+                }
             }
         }
 
